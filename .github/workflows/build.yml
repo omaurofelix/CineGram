@@ -1,12 +1,10 @@
 name: Build APK
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   apk:
@@ -22,9 +20,10 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
       - name: Build debug APK
         run: ./gradlew :app:assembleDebug --no-daemon
-      - name: Upload APK
-        uses: actions/upload-artifact@v7
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
         with:
-          name: cinegram-debug
-          path: app/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
+          tag_name: build-${{ github.run_number }}
+          name: Build ${{ github.run_number }}
+          prerelease: true
+          files: app/build/outputs/apk/debug/*.apk
