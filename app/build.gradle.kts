@@ -104,7 +104,7 @@ if (!media3extAar.isFile) {
     }
     logger.lifecycle("FFmpeg extension: nextlib from Maven Central, without the extra video decoders (scripts/build-media3ext.sh builds them)")
 }
-
+val fixedKeyStore = rootProject.file("signing/debug.jks")
 android {
     namespace = "com.tmplayer"
     // 37 because tdl-coroutines 14+ refuses to be compiled against anything older. targetSdk is
@@ -251,7 +251,15 @@ android {
         resources.excludes += setOf("META-INF/*.version", "kotlin/**", "DebugProbesKt.bin")
     }
 
-    signingConfigs {
+ signingConfigs {
+        if (fixedKeyStore.isFile) {
+            create("fixed") {
+                storeFile = fixedKeyStore
+                storePassword = "cinegram"
+                keyAlias = "cinegram"
+                keyPassword = "cinegram"
+            }
+        }
         if (!keystoreProps.isEmpty) {
             create("release") {
                 storeFile = rootProject.file(keystoreProps.getProperty("storeFile"))
@@ -263,6 +271,9 @@ android {
     }
 
     buildTypes {
+getByName("debug") {
+            signingConfigs.findByName("fixed")?.let { signingConfig = it }
+        }
         release {
             // The architectures the published APK carries, and the whole of why it is the size
             // it is: TDLib alone is 20 MB per architecture, FFmpeg another 4.
