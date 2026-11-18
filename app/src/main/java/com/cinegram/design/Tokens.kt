@@ -20,7 +20,7 @@ object Cine {
     const val FadeMs = 240
     const val HeroFadeMs = 400
 
-    val PosterWidth = 180.dp
+    val PosterWidth = 110.dp
     const val PosterRatio = 2f / 3f
     val RowGap = 16.dp
     val ScreenMargin = 56.dp
