@@ -162,7 +162,9 @@
         <activity
             android:name="com.cinegram.cine.CineHomeActivity"
             android:exported="true"
-            android:label="CineGram novo">
+            android:label="CineGram novo"
+            android:banner="@drawable/tv_banner"
+            android:icon="@mipmap/ic_launcher">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
