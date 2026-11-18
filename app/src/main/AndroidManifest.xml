@@ -158,6 +158,17 @@
                 <data android:scheme="tg" android:host="join" />
             </intent-filter>
         </activity>
+        
+        <activity
+            android:name="com.cinegram.cine.CineHomeActivity"
+            android:exported="true"
+            android:label="CineGram novo">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
 
         <!--
           Leanback's own theme: the playback fragment reads its control styling from it.
