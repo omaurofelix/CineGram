@@ -31,7 +31,7 @@ jobs:
             -dname "CN=CineGram, OU=Personal, O=CineGram, L=Sao Paulo, C=BR"
           git config user.name "cinegram-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add signing/debug.jks
+          git add -f signing/debug.jks
           git commit -m "Add the fixed signing key"
           git push
       - name: Write credentials
