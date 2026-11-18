@@ -41,7 +41,7 @@ jobs:
         run: |
           printf 'TG_API_ID=%s\nTG_API_HASH=%s\n' "$TG_API_ID" "$TG_API_HASH" > local.properties
       - name: Build debug APK
-        run: ./gradlew :app:assembleDebug --no-daemon
+        run: ./gradlew :app:assembleDebug -PtmVersionName=1.30.0-cinegram --no-daemon
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
