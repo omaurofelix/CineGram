@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
@@ -61,7 +62,6 @@ fun HomeScreen() {
 
     Column(Modifier.fillMaxSize().background(Cine.Bg)) {
         Box(Modifier.fillMaxWidth().weight(1f)) {
-            // A arte, por enquanto um degradê frio. Ela escurece ate o preto embaixo.
             Box(
                 Modifier.fillMaxSize().background(
                     Brush.verticalGradient(
@@ -205,32 +205,50 @@ private fun LandscapeCard(item: FakeItem, firstFocus: FocusRequester?, onClick: 
 @Composable
 private fun PrimaryButton(label: String, onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(if (focused) 1.06f else 1f)
 
     Box(
         Modifier
+            .offset(y = if (focused) (-3).dp else 0.dp)
+            .scale(scale)
+            .shadow(
+                elevation = if (focused) 26.dp else 0.dp,
+                shape = CircleShape,
+                ambientColor = Color.Black,
+                spotColor = Color.Black,
+            )
             .clip(CircleShape)
-            .background(if (focused) Color.White else Color(0xFFF0F0F2))
+            .background(Color(0xFFF0F0F2))
             .onFocusChanged { focused = it.isFocused }
             .clickable(onClick = onClick)
-            .padding(horizontal = 26.dp, vertical = 11.dp),
+            .padding(horizontal = 20.dp, vertical = 9.dp),
     ) {
-        Text(label, color = Color.Black, fontWeight = FontWeight.Medium, fontSize = 15.sp)
+        Text(label, color = Color.Black, fontWeight = FontWeight.Medium, fontSize = 13.sp)
     }
 }
 
 @Composable
 private fun GhostButton(label: String, onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(if (focused) 1.06f else 1f)
 
     Box(
         Modifier
+            .offset(y = if (focused) (-3).dp else 0.dp)
+            .scale(scale)
+            .shadow(
+                elevation = if (focused) 26.dp else 0.dp,
+                shape = CircleShape,
+                ambientColor = Color.Black,
+                spotColor = Color.Black,
+            )
             .clip(CircleShape)
-            .background(if (focused) Color(0x40FFFFFF) else Color(0x1FFFFFFF))
+            .background(if (focused) Color.White else Color(0x1FFFFFFF))
             .border(1.dp, Color(0x44FFFFFF), CircleShape)
             .onFocusChanged { focused = it.isFocused }
             .clickable(onClick = onClick)
-            .padding(horizontal = 26.dp, vertical = 11.dp),
+            .padding(horizontal = 20.dp, vertical = 9.dp),
     ) {
-        Text(label, color = Cine.TextPrimary, fontSize = 15.sp)
+        Text(label, color = if (focused) Color.Black else Cine.TextPrimary, fontSize = 13.sp)
     }
 }
