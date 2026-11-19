@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Anel -->
+    <path
+        android:pathData="M54,32 a22,22 0 1,0 0.001,0"
+        android:strokeColor="#F5F5F7"
+        android:strokeWidth="3.5"
+        android:fillColor="#00000000" />
+
+    <!-- Play -->
+    <path
+        android:pathData="M48,45 L48,63 L64,54 Z"
+        android:fillColor="#F5F5F7" />
+</vector>
