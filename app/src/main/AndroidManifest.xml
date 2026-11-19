@@ -129,11 +129,7 @@
               Both launcher categories: a TV launcher only looks for the leanback one, a phone
               launcher only for the plain one, and the app has to appear in whichever it is on.
             -->
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+            
             <!--
               Telegram links (CP79), offered in the chooser beside Telegram itself and never the
               default handler: autoVerify is off and t.me's own site does not name this app, so
@@ -162,7 +158,7 @@
         <activity
             android:name="com.cinegram.cine.CineHomeActivity"
             android:exported="true"
-            android:label="CineGram novo"
+            android:label="CineGram"
             android:banner="@drawable/tv_banner"
             android:icon="@mipmap/ic_launcher">
             <intent-filter>
