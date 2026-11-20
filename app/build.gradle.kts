@@ -408,6 +408,8 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.tv.material)
     implementation(libs.androidx.core.ktx)
+    implementation("io.coil-kt.coil3:coil-compose:3.1.0")
+    implementation("io.coil-kt.coil3:coil-network-okhttp:3.1.0")
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
