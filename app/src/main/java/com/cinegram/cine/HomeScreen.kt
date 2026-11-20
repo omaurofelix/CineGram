@@ -39,10 +39,14 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
 import com.cinegram.design.Cine
+
+private const val SHOW_ID = 133808
 
 private data class FakeItem(val title: String, val tone: Color, val progress: Float)
 
@@ -59,15 +63,45 @@ private val FakeRow = listOf(
 fun HomeScreen() {
     val firstFocus = remember { FocusRequester() }
     var lastAction by remember { mutableStateOf("-") }
+    var heroUrl by remember { mutableStateOf<String?>(null) }
+    var stills by remember { mutableStateOf<List<String>>(emptyList()) }
+
+    LaunchedEffect(Unit) {
+        heroUrl = Tmdb.backdrop(SHOW_ID)
+        stills = Tmdb.stills(SHOW_ID, 1)
+    }
 
     Column(Modifier.fillMaxSize().background(Cine.Bg)) {
         Box(Modifier.fillMaxWidth().weight(1f)) {
+            val hero = heroUrl
+            if (hero != null) {
+                AsyncImage(
+                    model = hero,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                Box(
+                    Modifier.fillMaxSize().background(
+                        Brush.verticalGradient(
+                            colorStops = arrayOf(
+                                0f to Color(0xFF2A3842),
+                                0.55f to Color(0xCC10161B),
+                                1f to Cine.Bg,
+                            ),
+                        ),
+                    ),
+                )
+            }
+
+            // O escurecimento por cima, para o texto ficar legível sobre a arte.
             Box(
                 Modifier.fillMaxSize().background(
                     Brush.verticalGradient(
                         colorStops = arrayOf(
-                            0f to Color(0xFF2A3842),
-                            0.55f to Color(0xCC10161B),
+                            0f to Color(0x33000000),
+                            0.5f to Color(0x88000000),
                             1f to Cine.Bg,
                         ),
                     ),
@@ -77,7 +111,7 @@ fun HomeScreen() {
             Column(
                 Modifier
                     .align(Alignment.BottomStart)
-                    .padding(start = Cine.ScreenMargin, bottom = 18.dp)
+                    .padding(start = Cine.ScreenMargin, end = Cine.ScreenMargin, bottom = 18.dp, top = 30.dp)
                     .fillMaxWidth(0.58f),
             ) {
                 Text(
@@ -144,6 +178,7 @@ fun HomeScreen() {
             itemsIndexed(FakeRow) { index, item ->
                 LandscapeCard(
                     item = item,
+                    url = stills.getOrNull(index),
                     firstFocus = if (index == 0) firstFocus else null,
                     onClick = { lastAction = item.title },
                 )
@@ -157,7 +192,12 @@ fun HomeScreen() {
 }
 
 @Composable
-private fun LandscapeCard(item: FakeItem, firstFocus: FocusRequester?, onClick: () -> Unit) {
+private fun LandscapeCard(
+    item: FakeItem,
+    url: String?,
+    firstFocus: FocusRequester?,
+    onClick: () -> Unit,
+) {
     var focused by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(if (focused) 1.04f else 1f)
 
@@ -183,11 +223,20 @@ private fun LandscapeCard(item: FakeItem, firstFocus: FocusRequester?, onClick: 
             .onFocusChanged { focused = it.isFocused }
             .clickable(onClick = onClick),
     ) {
+        if (url != null) {
+            AsyncImage(
+                model = url,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+
         Text(
             item.title,
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.sp),
             color = Cine.TextPrimary,
-            modifier = Modifier.align(Alignment.TopStart).padding(10.dp),
+            modifier = Modifier.align(Alignment.TopStart).padding(8.dp),
         )
 
         if (item.progress > 0f) {
