@@ -159,7 +159,7 @@ fun HomeScreen() {
 @Composable
 private fun LandscapeCard(item: FakeItem, firstFocus: FocusRequester?, onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(if (focused) 1.05f else 1f)
+    val scale by animateFloatAsState(if (focused) 1.04f else 1f)
 
     Box(
         Modifier
@@ -167,10 +167,10 @@ private fun LandscapeCard(item: FakeItem, firstFocus: FocusRequester?, onClick: 
             .aspectRatio(16f / 9f)
             .scale(scale)
             .shadow(
-                elevation = if (focused) 16.dp else 0.dp,
+                elevation = if (focused) 14.dp else 0.dp,
                 shape = RoundedCornerShape(8.dp),
-                ambientColor = Color.White,
-                spotColor = Color.White,
+                ambientColor = Color.Black,
+                spotColor = Color.Black,
             )
             .clip(RoundedCornerShape(8.dp))
             .background(item.tone)
@@ -205,20 +205,20 @@ private fun LandscapeCard(item: FakeItem, firstFocus: FocusRequester?, onClick: 
 @Composable
 private fun PrimaryButton(label: String, onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(if (focused) 1.06f else 1f)
+    val scale by animateFloatAsState(if (focused) 1.04f else 1f)
 
     Box(
         Modifier
-            .offset(y = if (focused) (-3).dp else 0.dp)
+            .offset(y = if (focused) (-2).dp else 0.dp)
             .scale(scale)
             .shadow(
-                elevation = if (focused) 26.dp else 0.dp,
+                elevation = if (focused) 18.dp else 0.dp,
                 shape = CircleShape,
                 ambientColor = Color.Black,
                 spotColor = Color.Black,
             )
             .clip(CircleShape)
-            .background(Color(0xFFF0F0F2))
+            .background(Color(0xFFE9E9EC))
             .onFocusChanged { focused = it.isFocused }
             .clickable(onClick = onClick)
             .padding(horizontal = 20.dp, vertical = 9.dp),
@@ -230,25 +230,29 @@ private fun PrimaryButton(label: String, onClick: () -> Unit) {
 @Composable
 private fun GhostButton(label: String, onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(if (focused) 1.06f else 1f)
+    val scale by animateFloatAsState(if (focused) 1.04f else 1f)
 
     Box(
         Modifier
-            .offset(y = if (focused) (-3).dp else 0.dp)
+            .offset(y = if (focused) (-2).dp else 0.dp)
             .scale(scale)
             .shadow(
-                elevation = if (focused) 26.dp else 0.dp,
+                elevation = if (focused) 18.dp else 0.dp,
                 shape = CircleShape,
                 ambientColor = Color.Black,
                 spotColor = Color.Black,
             )
             .clip(CircleShape)
-            .background(if (focused) Color.White else Color(0x1FFFFFFF))
-            .border(1.dp, Color(0x44FFFFFF), CircleShape)
+            .background(if (focused) Color(0x2EFFFFFF) else Color(0x14FFFFFF))
+            .border(
+                width = if (focused) 1.5.dp else 1.dp,
+                color = if (focused) Color(0xCCFFFFFF) else Color(0x33FFFFFF),
+                shape = CircleShape,
+            )
             .onFocusChanged { focused = it.isFocused }
             .clickable(onClick = onClick)
             .padding(horizontal = 20.dp, vertical = 9.dp),
     ) {
-        Text(label, color = if (focused) Color.Black else Cine.TextPrimary, fontSize = 13.sp)
+        Text(label, color = Cine.TextPrimary, fontSize = 13.sp)
     }
 }
