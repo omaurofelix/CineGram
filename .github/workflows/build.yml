@@ -38,8 +38,9 @@ jobs:
         env:
           TG_API_ID: ${{ secrets.TG_API_ID }}
           TG_API_HASH: ${{ secrets.TG_API_HASH }}
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
         run: |
-          printf 'TG_API_ID=%s\nTG_API_HASH=%s\n' "$TG_API_ID" "$TG_API_HASH" > local.properties
+          printf 'TG_API_ID=%s\nTG_API_HASH=%s\nTMDB_API_KEY=%s\n' "$TG_API_ID" "$TG_API_HASH" "$TMDB_API_KEY" > local.properties    printf 'TG_API_ID=%s\nTG_API_HASH=%s\n' "$TG_API_ID" "$TG_API_HASH" > local.properties
       - name: Build debug APK
         run: ./gradlew :app:assembleDebug -PtmVersionName=1.30.0-cinegram --no-daemon
       - name: Publish release
