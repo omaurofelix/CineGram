@@ -64,7 +64,7 @@ fun HomeScreen() {
     val firstFocus = remember { FocusRequester() }
     var lastAction by remember { mutableStateOf("-") }
     var heroUrl by remember { mutableStateOf<String?>(null) }
-    var stills by remember { mutableStateOf<List<String>>(emptyList()) }
+    var stills by remember { mutableStateOf<List<String?>>(emptyList()) }
 
     LaunchedEffect(Unit) {
         heroUrl = Tmdb.backdrop(SHOW_ID)
