@@ -28,7 +28,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -40,9 +39,12 @@ import com.cinegram.design.Cine
 
 private val NavItems = listOf("Início", "Categorias", "Filmes", "Séries", "Favoritos")
 
+private val ChipShape = RoundedCornerShape(10.dp)
+private val ChipFocusBg = Color(0xFFE9E9EC)
+
 /**
- * Cabeçalho do JetStream: marca a esquerda, navegação, busca e o perfil ativo
- * a direita. Fica sobre a arte do hero, com um degrade escuro para dar leitura.
+ * Barra superior do JetStream: marca a esquerda, navegacao no meio, busca e o
+ * perfil ativo no canto direito. Fica em barra solida, fora da arte.
  */
 @Composable
 fun CineHeader(
@@ -56,16 +58,12 @@ fun CineHeader(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .background(
-                Brush.verticalGradient(
-                    colorStops = arrayOf(0f to Color(0xE6000000), 1f to Color(0x00000000)),
-                ),
-            )
-            .padding(horizontal = Cine.ScreenMargin, vertical = 14.dp),
+            .background(Cine.Bg)
+            .padding(start = Cine.ScreenMargin, end = Cine.ScreenMargin, top = 10.dp, bottom = 8.dp),
     ) {
         Logo()
 
-        Spacer(Modifier.width(26.dp))
+        Spacer(Modifier.width(24.dp))
 
         NavItems.forEachIndexed { index, label ->
             NavItem(
@@ -73,14 +71,14 @@ fun CineHeader(
                 firstFocus = if (index == 0) firstFocus else null,
                 onClick = { onNav(label) },
             )
-            Spacer(Modifier.width(4.dp))
+            Spacer(Modifier.width(8.dp))
         }
 
         Spacer(Modifier.weight(1f))
 
         RoundButton(onClick = onSearch) { tint -> SearchGlyph(tint) }
 
-        Spacer(Modifier.width(14.dp))
+        Spacer(Modifier.width(16.dp))
 
         Avatar(profile = profile, onClick = onProfile)
     }
@@ -108,17 +106,17 @@ private fun NavItem(label: String, firstFocus: FocusRequester?, onClick: () -> U
 
     Box(
         Modifier
-            .clip(CircleShape)
-            .background(if (focused) Color(0x26FFFFFF) else Color.Transparent)
+            .clip(ChipShape)
+            .background(if (focused) ChipFocusBg else Color.Transparent)
             .then(if (firstFocus != null) Modifier.focusRequester(firstFocus) else Modifier)
             .onFocusChanged { focused = it.isFocused }
             .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 8.dp),
+            .padding(horizontal = 14.dp, vertical = 9.dp),
     ) {
         Text(
             label,
-            color = if (focused) Cine.TextPrimary else Cine.TextSecondary,
-            fontSize = 13.sp,
+            color = if (focused) Color.Black else Cine.TextSecondary,
+            fontSize = 14.sp,
             fontWeight = if (focused) FontWeight.Medium else FontWeight.Normal,
         )
     }
@@ -133,13 +131,13 @@ private fun RoundButton(onClick: () -> Unit, content: @Composable (Color) -> Uni
         Modifier
             .size(38.dp)
             .scale(scale)
-            .clip(CircleShape)
-            .background(if (focused) Color(0x26FFFFFF) else Color.Transparent)
+            .clip(ChipShape)
+            .background(if (focused) ChipFocusBg else Color.Transparent)
             .onFocusChanged { focused = it.isFocused }
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        content(if (focused) Cine.TextPrimary else Cine.TextSecondary)
+        content(if (focused) Color.Black else Cine.TextSecondary)
     }
 }
 
