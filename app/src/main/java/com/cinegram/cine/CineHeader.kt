@@ -43,8 +43,8 @@ private val ChipShape = RoundedCornerShape(10.dp)
 private val ChipFocusBg = Color(0xFFE9E9EC)
 
 /**
- * Barra superior do JetStream: marca a esquerda, navegacao no meio, busca e o
- * perfil ativo no canto direito. Fica em barra solida, fora da arte.
+ * Barra superior do JetStream: avatar primeiro, navegacao no meio, busca e a
+ * marca no canto oposto. Fica em barra solida, fora da arte.
  */
 @Composable
 fun CineHeader(
@@ -59,11 +59,11 @@ fun CineHeader(
         modifier = Modifier
             .fillMaxWidth()
             .background(Cine.Bg)
-            .padding(start = Cine.ScreenMargin, end = Cine.ScreenMargin, top = 10.dp, bottom = 8.dp),
+            .padding(start = Cine.ScreenMargin, end = Cine.ScreenMargin, top = 24.dp, bottom = 12.dp),
     ) {
-        Logo()
+        Avatar(profile = profile, onClick = onProfile)
 
-        Spacer(Modifier.width(24.dp))
+        Spacer(Modifier.width(22.dp))
 
         NavItems.forEachIndexed { index, label ->
             NavItem(
@@ -78,25 +78,31 @@ fun CineHeader(
 
         RoundButton(onClick = onSearch) { tint -> SearchGlyph(tint) }
 
-        Spacer(Modifier.width(16.dp))
+        Spacer(Modifier.width(18.dp))
 
-        Avatar(profile = profile, onClick = onProfile)
+        Brand()
     }
 }
 
 @Composable
-private fun Logo() {
+private fun Brand() {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(
-            Modifier.size(26.dp).clip(RoundedCornerShape(7.dp)).background(Cine.Accent),
+            Modifier.size(24.dp).clip(RoundedCornerShape(6.dp)).background(Cine.Accent),
             contentAlignment = Alignment.Center,
         ) {
-            Text("C", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            Text("C", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
         }
 
         Spacer(Modifier.width(10.dp))
 
-        Text("CineGram", color = Cine.TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        Text(
+            "CINEGRAM",
+            color = Cine.TextPrimary,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium,
+            letterSpacing = 2.sp,
+        )
     }
 }
 
