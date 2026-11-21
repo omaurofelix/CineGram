@@ -45,6 +45,11 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -56,6 +61,7 @@ import kotlinx.coroutines.delay
 
 private const val SHOW_ID = 133808
 private const val MAX_HEROES = 6
+private const val ROW_PAD = 10
 
 private data class FakeItem(val title: String, val tone: Color, val progress: Float)
 
@@ -121,6 +127,11 @@ fun HomeScreen() {
                         index = index,
                         lastAction = lastAction,
                         onDot = { index = it },
+                        onStep = { delta ->
+                            if (heroes.isNotEmpty()) {
+                                index = (index + delta).coerceIn(0, heroes.lastIndex)
+                            }
+                        },
                         onPlay = { lastAction = "Assistir ${heroes.getOrNull(index)?.title.orEmpty()}" },
                     )
                 }
@@ -130,10 +141,13 @@ fun HomeScreen() {
                 Column {
                     Spacer(Modifier.height(34.dp))
                     RowTitle("Continuar assistindo")
-                    Spacer(Modifier.height(14.dp))
+                    Spacer(Modifier.height(10.dp))
                     LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(Cine.RowGap),
-                        contentPadding = PaddingValues(horizontal = Cine.ScreenMargin),
+                        contentPadding = PaddingValues(
+                            horizontal = Cine.ScreenMargin,
+                            vertical = ROW_PAD.dp,
+                        ),
                     ) {
                         itemsIndexed(FakeRow) { i, item ->
                             LandscapeCard(
@@ -148,27 +162,27 @@ fun HomeScreen() {
 
             item {
                 Column {
-                    Spacer(Modifier.height(30.dp))
+                    Spacer(Modifier.height(26.dp))
                     RowTitle("Em alta agora")
-                    Spacer(Modifier.height(14.dp))
+                    Spacer(Modifier.height(10.dp))
                     PosterRow(trendingCards) { lastAction = it.title }
                 }
             }
 
             item {
                 Column {
-                    Spacer(Modifier.height(30.dp))
+                    Spacer(Modifier.height(26.dp))
                     RowTitle("Populares")
-                    Spacer(Modifier.height(14.dp))
+                    Spacer(Modifier.height(10.dp))
                     PosterRow(popularCards) { lastAction = it.title }
                 }
             }
 
             item {
                 Column {
-                    Spacer(Modifier.height(30.dp))
+                    Spacer(Modifier.height(26.dp))
                     RowTitle("Mais bem avaliadas")
-                    Spacer(Modifier.height(14.dp))
+                    Spacer(Modifier.height(10.dp))
                     PosterRow(topCards) { lastAction = it.title }
                 }
             }
@@ -194,6 +208,7 @@ private fun HeroCarousel(
     index: Int,
     lastAction: String,
     onDot: (Int) -> Unit,
+    onStep: (Int) -> Unit,
     onPlay: () -> Unit,
 ) {
     val hero = heroes.getOrNull(index)
@@ -212,6 +227,20 @@ private fun HeroCarousel(
                 shape = RoundedCornerShape(14.dp),
             )
             .onFocusChanged { focused = it.isFocused }
+            .onKeyEvent { event ->
+                if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                when (event.key) {
+                    Key.DirectionLeft -> {
+                        onStep(-1)
+                        true
+                    }
+                    Key.DirectionRight -> {
+                        onStep(1)
+                        true
+                    }
+                    else -> false
+                }
+            }
             .clickable(onClick = onPlay),
     ) {
         if (hero?.backdrop != null) {
@@ -338,7 +367,7 @@ private fun PlayGlyph(tint: Color) {
 private fun PosterRow(cards: List<Tmdb.Card>, onClick: (Tmdb.Card) -> Unit) {
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(Cine.RowGap),
-        contentPadding = PaddingValues(horizontal = Cine.ScreenMargin),
+        contentPadding = PaddingValues(horizontal = Cine.ScreenMargin, vertical = ROW_PAD.dp),
     ) {
         items(cards) { card ->
             PosterCard(card = card, onClick = { onClick(card) })
@@ -349,7 +378,7 @@ private fun PosterRow(cards: List<Tmdb.Card>, onClick: (Tmdb.Card) -> Unit) {
 @Composable
 private fun PosterCard(card: Tmdb.Card, onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(if (focused) 1.05f else 1f)
+    val scale by animateFloatAsState(if (focused) 1.03f else 1f)
 
     Box(
         Modifier
@@ -380,7 +409,7 @@ private fun PosterCard(card: Tmdb.Card, onClick: () -> Unit) {
 @Composable
 private fun LandscapeCard(item: FakeItem, url: String?, onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(if (focused) 1.04f else 1f)
+    val scale by animateFloatAsState(if (focused) 1.02f else 1f)
 
     Box(
         Modifier
