@@ -33,11 +33,15 @@ object Tmdb {
         return if (path.isNullOrEmpty()) null else "$IMAGE/w1280$path"
     }
 
-    suspend fun stills(tvId: Int, season: Int): List<String> {
+    /**
+     * Stills por episódio. A lista mantém o tamanho da temporada e usa null
+     * no episódio sem imagem, para o índice continuar casando com o episódio.
+     */
+    suspend fun stills(tvId: Int, season: Int): List<String?> {
         val body = get("/tv/$tvId/season/$season") ?: return emptyList()
         return runCatching {
             val episodes = JSONObject(body).optJSONArray("episodes") ?: return emptyList()
-            (0 until episodes.length()).mapNotNull { i ->
+            (0 until episodes.length()).map { i ->
                 episodes.optJSONObject(i)
                     ?.optString("still_path")
                     ?.takeIf { it.isNotEmpty() }
