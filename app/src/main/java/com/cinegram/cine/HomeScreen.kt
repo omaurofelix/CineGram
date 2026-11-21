@@ -25,6 +25,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.cinegram.cine.profiles.ProfileStore
 import com.cinegram.design.Cine
 
 private const val SHOW_ID = 133808
@@ -65,6 +67,10 @@ fun HomeScreen() {
     var lastAction by remember { mutableStateOf("-") }
     var heroUrl by remember { mutableStateOf<String?>(null) }
     var stills by remember { mutableStateOf<List<String?>>(emptyList()) }
+
+    val profiles by ProfileStore.profiles.collectAsState()
+    val activeId by ProfileStore.activeId.collectAsState()
+    val active = profiles.firstOrNull { it.id == activeId }
 
     LaunchedEffect(Unit) {
         heroUrl = Tmdb.backdrop(SHOW_ID)
@@ -108,10 +114,18 @@ fun HomeScreen() {
                 ),
             )
 
+            CineHeader(
+                profile = active,
+                firstFocus = firstFocus,
+                onNav = { lastAction = it },
+                onSearch = { lastAction = "Buscar" },
+                onProfile = { ProfileStore.setActive(null) },
+            )
+
             Column(
                 Modifier
                     .align(Alignment.BottomStart)
-                    .padding(start = Cine.ScreenMargin, end = Cine.ScreenMargin, bottom = 18.dp, top = 30.dp)
+                    .padding(start = Cine.ScreenMargin, end = Cine.ScreenMargin, bottom = 18.dp)
                     .fillMaxWidth(0.58f),
             ) {
                 Text(
@@ -179,7 +193,7 @@ fun HomeScreen() {
                 LandscapeCard(
                     item = item,
                     url = stills.getOrNull(index),
-                    firstFocus = if (index == 0) firstFocus else null,
+                    firstFocus = null,
                     onClick = { lastAction = item.title },
                 )
             }
@@ -188,7 +202,7 @@ fun HomeScreen() {
         Spacer(Modifier.height(14.dp))
     }
 
-    LaunchedEffect(Unit) { firstFocus.requestFocus() }
+    LaunchedEffect(Unit) { runCatching { firstFocus.requestFocus() } }
 }
 
 @Composable
