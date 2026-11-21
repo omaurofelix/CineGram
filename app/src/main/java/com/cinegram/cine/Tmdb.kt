@@ -22,6 +22,8 @@ object Tmdb {
         val backdrop: String?,
     )
 
+    data class Card(val id: Int, val title: String, val poster: String?)
+
     private suspend fun get(path: String): String? = withContext(Dispatchers.IO) {
         val key = BuildConfig.TMDB_API_KEY
         if (key.isBlank()) return@withContext null
@@ -76,4 +78,22 @@ object Tmdb {
             }
         }.getOrDefault(emptyList())
     }
+
+    private suspend fun cards(path: String): List<Card> {
+        val body = get(path) ?: return emptyList()
+        return runCatching {
+            val results = JSONObject(body).optJSONArray("results") ?: return emptyList()
+            (0 until results.length()).mapNotNull { i ->
+                val o = results.optJSONObject(i) ?: return@mapNotNull null
+                val poster = o.optString("poster_path")
+                val title = o.optString("name").ifEmpty { o.optString("title") }
+                if (poster.isEmpty() || title.isEmpty()) return@mapNotNull null
+                Card(id = o.optInt("id"), title = title, poster = "$IMAGE/w342$poster")
+            }
+        }.getOrDefault(emptyList())
+    }
+
+    suspend fun popular(): List<Card> = cards("/tv/popular")
+
+    suspend fun topRated(): List<Card> = cards("/tv/top_rated")
 }
