@@ -1,6 +1,7 @@
 package com.cinegram.cine
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -40,6 +41,10 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -50,6 +55,7 @@ import com.cinegram.design.Cine
 import kotlinx.coroutines.delay
 
 private const val SHOW_ID = 133808
+private const val MAX_HEROES = 6
 
 private data class FakeItem(val title: String, val tone: Color, val progress: Float)
 
@@ -78,7 +84,7 @@ fun HomeScreen() {
     val active = profiles.firstOrNull { it.id == activeId }
 
     LaunchedEffect(Unit) {
-        heroes = Tmdb.trending()
+        heroes = Tmdb.trending().take(MAX_HEROES)
         stills = Tmdb.stills(SHOW_ID, 1)
         popularCards = Tmdb.popular()
         topCards = Tmdb.topRated()
@@ -271,21 +277,21 @@ private fun HeroCarousel(
 
         if (heroes.size > 1) {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(7.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(end = 22.dp, bottom = 22.dp)
-                    .clip(CircleShape)
-                    .background(Color(0x4D000000))
-                    .padding(horizontal = 11.dp, vertical = 8.dp),
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color(0x4DFFFFFF))
+                    .padding(horizontal = 12.dp, vertical = 9.dp),
             ) {
                 heroes.forEachIndexed { i, _ ->
                     Box(
                         Modifier
-                            .size(if (i == index) 9.dp else 7.dp)
+                            .size(8.dp)
                             .clip(CircleShape)
-                            .background(if (i == index) Cine.TextPrimary else Color(0x66FFFFFF))
+                            .background(if (i == index) Color.White else Color(0xB3FFFFFF))
                             .clickable { onDot(i) },
                     )
                 }
@@ -303,10 +309,28 @@ private fun PlayBadge() {
             .padding(horizontal = 20.dp, vertical = 10.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("▶", color = Color.Black, fontSize = 11.sp)
-            Spacer(Modifier.width(9.dp))
+            PlayGlyph(Color.Black)
+            Spacer(Modifier.width(10.dp))
             Text("Assistir", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Medium)
         }
+    }
+}
+
+@Composable
+private fun PlayGlyph(tint: Color) {
+    Canvas(Modifier.size(width = 11.dp, height = 12.dp)) {
+        val stroke = 1.7.dp.toPx()
+        val path = Path().apply {
+            moveTo(stroke, stroke)
+            lineTo(size.width - stroke, size.height / 2f)
+            lineTo(stroke, size.height - stroke)
+            close()
+        }
+        drawPath(
+            path = path,
+            color = tint,
+            style = Stroke(width = stroke, join = StrokeJoin.Round, cap = StrokeCap.Round),
+        )
     }
 }
 
