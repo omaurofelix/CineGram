@@ -15,6 +15,13 @@ object Tmdb {
     private const val BASE = "https://api.themoviedb.org/3"
     private const val IMAGE = "https://image.tmdb.org/t/p"
 
+    data class Hero(
+        val id: Int,
+        val title: String,
+        val overview: String,
+        val backdrop: String?,
+    )
+
     private suspend fun get(path: String): String? = withContext(Dispatchers.IO) {
         val key = BuildConfig.TMDB_API_KEY
         if (key.isBlank()) return@withContext null
@@ -46,6 +53,26 @@ object Tmdb {
                     ?.optString("still_path")
                     ?.takeIf { it.isNotEmpty() }
                     ?.let { "$IMAGE/w780$it" }
+            }
+        }.getOrDefault(emptyList())
+    }
+
+    /** Destaques da semana, usados no carrossel do topo da home. */
+    suspend fun trending(): List<Hero> {
+        val body = get("/trending/tv/week") ?: return emptyList()
+        return runCatching {
+            val results = JSONObject(body).optJSONArray("results") ?: return emptyList()
+            (0 until results.length()).mapNotNull { i ->
+                val o = results.optJSONObject(i) ?: return@mapNotNull null
+                val title = o.optString("name").ifEmpty { o.optString("title") }
+                if (title.isEmpty()) return@mapNotNull null
+                val path = o.optString("backdrop_path")
+                Hero(
+                    id = o.optInt("id"),
+                    title = title,
+                    overview = o.optString("overview"),
+                    backdrop = if (path.isEmpty()) null else "$IMAGE/w1280$path",
+                )
             }
         }.getOrDefault(emptyList())
     }
