@@ -4,24 +4,29 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 /**
- * Os valores da especificação visual do CineGram, num lugar só.
- * Preto profundo, um acento dessaturado, movimento curto e nada de enfeite.
+ * Valores da especificação visual do CineGram, no padrão do JetStream:
+ * contorno de foco de 3dp, raio sutil e escala tipográfica clara.
  */
 object Cine {
-    val Bg = Color(0xFF0A0A0B)
-    val BgElevated = Color(0xFF141416)
-    val TextPrimary = Color(0xFFF5F5F7)
-    val TextSecondary = Color(0xFF8E8E93)
+    val Bg = Color(0xFF0B0B0D)
+    val BgElevated = Color(0xFF16161A)
+    val Surface = Color(0xFF1E1E24)
+    val TextPrimary = Color(0xFFF4F4F6)
+    val TextSecondary = Color(0xFF9A9AA2)
     val Accent = Color(0xFFC4463F)
-    val FocusLine = Color(0xFFFFFFFF)
+    val FocusRing = Color(0xFFF4F4F6)
 
-    const val FocusScale = 1.08f
-    val FocusShadow = 24.dp
-    const val FadeMs = 240
-    const val HeroFadeMs = 400
+    val FocusRingWidth = 3.dp
+    val FocusScale = 1.04f
+    const val FadeMs = 200
 
-    val PosterWidth = 110.dp
-    const val PosterRatio = 2f / 3f
-    val RowGap = 16.dp
+    val ShapeRadius = 8.dp
     val ScreenMargin = 56.dp
+    val RowGap = 16.dp
+
+    val PosterWidth = 150.dp
+    const val PosterRatio = 2f / 3f
+    val LandscapeWidth = 220.dp
+    const val LandscapeRatio = 16f / 9f
+    val RowHeight = 200.dp
 }
