@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -103,7 +102,11 @@ fun ProfileGateScreen() {
         }
     }
 
-    LaunchedEffect(Unit) { firstFocus.requestFocus() }
+    LaunchedEffect(profiles.isNotEmpty()) {
+        if (profiles.isNotEmpty()) {
+            runCatching { firstFocus.requestFocus() }
+        }
+    }
 
     askingPin?.let { profile ->
         PinDialog(
@@ -227,14 +230,17 @@ private fun PinDialog(profile: Profile, onDismiss: () -> Unit, onCorrect: () -> 
         title = { Text("PIN de ${profile.name}") },
         text = {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("•".repeat(typed.length).padEnd(pin.length, '·'), color = Cine.TextPrimary)
+                Text(
+                    "•".repeat(typed.length).padEnd(pin.length, '·'),
+                    color = Cine.TextPrimary,
+                )
                 Spacer(Modifier.height(16.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("123", "456", "789", "0").forEach { row ->
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             row.forEach { digit ->
                                 TextButton(onClick = { typed += digit }) {
-                                    Text(digit, fontSize = 18.sp)
+                                    Text(digit.toString(), fontSize = 18.sp)
                                 }
                             }
                         }
