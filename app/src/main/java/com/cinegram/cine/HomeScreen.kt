@@ -1,6 +1,5 @@
 package com.cinegram.cine
 
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -36,8 +35,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -52,6 +52,7 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
@@ -61,7 +62,9 @@ import kotlinx.coroutines.delay
 
 private const val SHOW_ID = 133808
 private const val MAX_HEROES = 6
-private const val ROW_PAD = 10
+
+private val PosterRowHeight = 258.dp
+private val EpisodeRowHeight = 138.dp
 
 private data class FakeItem(val title: String, val tone: Color, val progress: Float)
 
@@ -76,7 +79,8 @@ private val FakeRow = listOf(
 
 @Composable
 fun HomeScreen() {
-    val firstFocus = remember { FocusRequester() }
+    val inicioFocus = remember { FocusRequester() }
+    val firstCardFocus = remember { FocusRequester() }
     var heroes by remember { mutableStateOf<List<Tmdb.Hero>>(emptyList()) }
     var trendingCards by remember { mutableStateOf<List<Tmdb.Card>>(emptyList()) }
     var popularCards by remember { mutableStateOf<List<Tmdb.Card>>(emptyList()) }
@@ -109,7 +113,7 @@ fun HomeScreen() {
     Column(Modifier.fillMaxSize().background(Cine.Bg)) {
         CineHeader(
             profile = active,
-            firstFocus = firstFocus,
+            firstFocus = inicioFocus,
             onNav = { lastAction = it },
             onSearch = { lastAction = "Buscar" },
             onProfile = { ProfileStore.setActive(null) },
@@ -117,7 +121,7 @@ fun HomeScreen() {
 
         LazyColumn(
             modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(bottom = 30.dp),
+            contentPadding = PaddingValues(bottom = 60.dp),
         ) {
             item {
                 Column {
@@ -126,6 +130,8 @@ fun HomeScreen() {
                         heroes = heroes,
                         index = index,
                         lastAction = lastAction,
+                        upFocus = inicioFocus,
+                        downFocus = firstCardFocus,
                         onDot = { index = it },
                         onStep = { delta ->
                             if (heroes.isNotEmpty()) {
@@ -139,22 +145,21 @@ fun HomeScreen() {
 
             item {
                 Column {
-                    Spacer(Modifier.height(34.dp))
+                    Spacer(Modifier.height(30.dp))
                     RowTitle("Continuar assistindo")
-                    Spacer(Modifier.height(10.dp))
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(Cine.RowGap),
-                        contentPadding = PaddingValues(
-                            horizontal = Cine.ScreenMargin,
-                            vertical = ROW_PAD.dp,
-                        ),
-                    ) {
-                        itemsIndexed(FakeRow) { i, item ->
-                            LandscapeCard(
-                                item = item,
-                                url = stills.getOrNull(i),
-                                onClick = { lastAction = item.title },
-                            )
+                    RowSlot(EpisodeRowHeight) {
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(Cine.RowGap),
+                            contentPadding = PaddingValues(horizontal = Cine.ScreenMargin),
+                        ) {
+                            itemsIndexed(FakeRow) { i, item ->
+                                LandscapeCard(
+                                    item = item,
+                                    url = stills.getOrNull(i),
+                                    focusRequester = if (i == 0) firstCardFocus else null,
+                                    onClick = { lastAction = item.title },
+                                )
+                            }
                         }
                     }
                 }
@@ -164,8 +169,9 @@ fun HomeScreen() {
                 Column {
                     Spacer(Modifier.height(26.dp))
                     RowTitle("Em alta agora")
-                    Spacer(Modifier.height(10.dp))
-                    PosterRow(trendingCards) { lastAction = it.title }
+                    RowSlot(PosterRowHeight) {
+                        PosterRow(trendingCards) { lastAction = it.title }
+                    }
                 }
             }
 
@@ -173,8 +179,9 @@ fun HomeScreen() {
                 Column {
                     Spacer(Modifier.height(26.dp))
                     RowTitle("Populares")
-                    Spacer(Modifier.height(10.dp))
-                    PosterRow(popularCards) { lastAction = it.title }
+                    RowSlot(PosterRowHeight) {
+                        PosterRow(popularCards) { lastAction = it.title }
+                    }
                 }
             }
 
@@ -182,14 +189,15 @@ fun HomeScreen() {
                 Column {
                     Spacer(Modifier.height(26.dp))
                     RowTitle("Mais bem avaliadas")
-                    Spacer(Modifier.height(10.dp))
-                    PosterRow(topCards) { lastAction = it.title }
+                    RowSlot(PosterRowHeight) {
+                        PosterRow(topCards) { lastAction = it.title }
+                    }
                 }
             }
         }
     }
 
-    LaunchedEffect(Unit) { runCatching { firstFocus.requestFocus() } }
+    LaunchedEffect(Unit) { runCatching { inicioFocus.requestFocus() } }
 }
 
 @Composable
@@ -203,10 +211,22 @@ private fun RowTitle(text: String) {
 }
 
 @Composable
+private fun RowSlot(height: Dp, content: @Composable () -> Unit) {
+    Box(
+        Modifier.fillMaxWidth().height(height),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        content()
+    }
+}
+
+@Composable
 private fun HeroCarousel(
     heroes: List<Tmdb.Hero>,
     index: Int,
     lastAction: String,
+    upFocus: FocusRequester,
+    downFocus: FocusRequester,
     onDot: (Int) -> Unit,
     onStep: (Int) -> Unit,
     onPlay: () -> Unit,
@@ -226,6 +246,10 @@ private fun HeroCarousel(
                 color = if (focused) Cine.TextPrimary else Color.Transparent,
                 shape = RoundedCornerShape(14.dp),
             )
+            .focusProperties {
+                up = upFocus
+                down = downFocus
+            }
             .onFocusChanged { focused = it.isFocused }
             .onKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
@@ -367,7 +391,7 @@ private fun PlayGlyph(tint: Color) {
 private fun PosterRow(cards: List<Tmdb.Card>, onClick: (Tmdb.Card) -> Unit) {
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(Cine.RowGap),
-        contentPadding = PaddingValues(horizontal = Cine.ScreenMargin, vertical = ROW_PAD.dp),
+        contentPadding = PaddingValues(horizontal = Cine.ScreenMargin),
     ) {
         items(cards) { card ->
             PosterCard(card = card, onClick = { onClick(card) })
@@ -378,13 +402,11 @@ private fun PosterRow(cards: List<Tmdb.Card>, onClick: (Tmdb.Card) -> Unit) {
 @Composable
 private fun PosterCard(card: Tmdb.Card, onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(if (focused) 1.03f else 1f)
 
     Box(
         Modifier
             .width(150.dp)
             .aspectRatio(2f / 3f)
-            .scale(scale)
             .clip(RoundedCornerShape(10.dp))
             .background(Cine.Surface)
             .border(
@@ -407,15 +429,18 @@ private fun PosterCard(card: Tmdb.Card, onClick: () -> Unit) {
 }
 
 @Composable
-private fun LandscapeCard(item: FakeItem, url: String?, onClick: () -> Unit) {
+private fun LandscapeCard(
+    item: FakeItem,
+    url: String?,
+    focusRequester: FocusRequester?,
+    onClick: () -> Unit,
+) {
     var focused by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(if (focused) 1.02f else 1f)
 
     Box(
         Modifier
             .width(196.dp)
             .aspectRatio(16f / 9f)
-            .scale(scale)
             .clip(RoundedCornerShape(10.dp))
             .background(item.tone)
             .border(
@@ -423,6 +448,7 @@ private fun LandscapeCard(item: FakeItem, url: String?, onClick: () -> Unit) {
                 color = if (focused) Cine.TextPrimary else Color.Transparent,
                 shape = RoundedCornerShape(10.dp),
             )
+            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .onFocusChanged { focused = it.isFocused }
             .clickable(onClick = onClick),
     ) {
