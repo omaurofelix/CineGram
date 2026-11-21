@@ -2,13 +2,16 @@ package com.cinegram.cine
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -31,11 +34,14 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cinegram.cine.profiles.Profile
 import com.cinegram.design.Cine
+import com.tmplayer.R
 
 private val NavItems = listOf("Início", "Categorias", "Filmes", "Séries", "Favoritos")
 
@@ -59,7 +65,7 @@ fun CineHeader(
         modifier = Modifier
             .fillMaxWidth()
             .background(Cine.Bg)
-            .padding(start = Cine.ScreenMargin, end = Cine.ScreenMargin, top = 24.dp, bottom = 12.dp),
+            .padding(start = Cine.ScreenMargin, end = Cine.ScreenMargin, top = 22.dp, bottom = 12.dp),
     ) {
         Avatar(profile = profile, onClick = onProfile)
 
@@ -86,22 +92,12 @@ fun CineHeader(
 
 @Composable
 private fun Brand() {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            Modifier.size(24.dp).clip(RoundedCornerShape(6.dp)).background(Cine.Accent),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text("C", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-        }
-
-        Spacer(Modifier.width(10.dp))
-
-        Text(
-            "CINEGRAM",
-            color = Cine.TextPrimary,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium,
-            letterSpacing = 2.sp,
+    Box(Modifier.width(120.dp).height(30.dp)) {
+        Image(
+            painter = painterResource(R.drawable.cinegram_logo),
+            contentDescription = "CineGram",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize(),
         )
     }
 }
