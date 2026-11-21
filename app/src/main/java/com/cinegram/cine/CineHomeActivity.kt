@@ -18,6 +18,7 @@ class CineHomeActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         ProfileStore.init(applicationContext)
+        ProfileStore.setActive(null)
 
         SingletonImageLoader.setSafe { context ->
             ImageLoader.Builder(context)
