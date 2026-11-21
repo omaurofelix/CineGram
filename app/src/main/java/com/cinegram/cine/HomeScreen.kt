@@ -108,53 +108,63 @@ fun HomeScreen() {
             contentPadding = PaddingValues(bottom = 30.dp),
         ) {
             item {
-                Spacer(Modifier.height(18.dp))
-                HeroCarousel(
-                    heroes = heroes,
-                    index = index,
-                    lastAction = lastAction,
-                    onDot = { index = it },
-                    onPlay = { lastAction = "Assistir ${heroes.getOrNull(index)?.title.orEmpty()}" },
-                )
+                Column {
+                    Spacer(Modifier.height(18.dp))
+                    HeroCarousel(
+                        heroes = heroes,
+                        index = index,
+                        lastAction = lastAction,
+                        onDot = { index = it },
+                        onPlay = { lastAction = "Assistir ${heroes.getOrNull(index)?.title.orEmpty()}" },
+                    )
+                }
             }
 
             item {
-                Spacer(Modifier.height(34.dp))
-                RowTitle("Continuar assistindo")
-                Spacer(Modifier.height(14.dp))
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(Cine.RowGap),
-                    contentPadding = PaddingValues(horizontal = Cine.ScreenMargin),
-                ) {
-                    itemsIndexed(FakeRow) { i, item ->
-                        LandscapeCard(
-                            item = item,
-                            url = stills.getOrNull(i),
-                            onClick = { lastAction = item.title },
-                        )
+                Column {
+                    Spacer(Modifier.height(34.dp))
+                    RowTitle("Continuar assistindo")
+                    Spacer(Modifier.height(14.dp))
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(Cine.RowGap),
+                        contentPadding = PaddingValues(horizontal = Cine.ScreenMargin),
+                    ) {
+                        itemsIndexed(FakeRow) { i, item ->
+                            LandscapeCard(
+                                item = item,
+                                url = stills.getOrNull(i),
+                                onClick = { lastAction = item.title },
+                            )
+                        }
                     }
                 }
             }
 
             item {
-                Spacer(Modifier.height(30.dp))
-                RowTitle("Em alta agora")
-                Spacer(Modifier.height(14.dp))
-                PosterRow(trendingCards) { lastAction = it.title }
+                Column {
+                    Spacer(Modifier.height(30.dp))
+                    RowTitle("Em alta agora")
+                    Spacer(Modifier.height(14.dp))
+                    PosterRow(trendingCards) { lastAction = it.title }
+                }
             }
 
             item {
-                Spacer(Modifier.height(30.dp))
-                RowTitle("Populares")
-                Spacer(Modifier.height(14.dp))
-                PosterRow(popularCards) { lastAction = it.title }
+                Column {
+                    Spacer(Modifier.height(30.dp))
+                    RowTitle("Populares")
+                    Spacer(Modifier.height(14.dp))
+                    PosterRow(popularCards) { lastAction = it.title }
+                }
             }
 
             item {
-                Spacer(Modifier.height(30.dp))
-                RowTitle("Mais bem avaliadas")
-                Spacer(Modifier.height(14.dp))
-                PosterRow(topCards) { lastAction = it.title }
+                Column {
+                    Spacer(Modifier.height(30.dp))
+                    RowTitle("Mais bem avaliadas")
+                    Spacer(Modifier.height(14.dp))
+                    PosterRow(topCards) { lastAction = it.title }
+                }
             }
         }
     }
