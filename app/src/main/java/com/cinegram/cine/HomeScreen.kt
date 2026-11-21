@@ -14,11 +14,12 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -35,9 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -66,10 +65,13 @@ private val FakeRow = listOf(
 @Composable
 fun HomeScreen() {
     val firstFocus = remember { FocusRequester() }
-    var lastAction by remember { mutableStateOf("-") }
     var heroes by remember { mutableStateOf<List<Tmdb.Hero>>(emptyList()) }
-    var index by remember { mutableStateOf(0) }
+    var trendingCards by remember { mutableStateOf<List<Tmdb.Card>>(emptyList()) }
+    var popularCards by remember { mutableStateOf<List<Tmdb.Card>>(emptyList()) }
+    var topCards by remember { mutableStateOf<List<Tmdb.Card>>(emptyList()) }
     var stills by remember { mutableStateOf<List<String?>>(emptyList()) }
+    var index by remember { mutableStateOf(0) }
+    var lastAction by remember { mutableStateOf("-") }
 
     val profiles by ProfileStore.profiles.collectAsState()
     val activeId by ProfileStore.activeId.collectAsState()
@@ -78,6 +80,9 @@ fun HomeScreen() {
     LaunchedEffect(Unit) {
         heroes = Tmdb.trending()
         stills = Tmdb.stills(SHOW_ID, 1)
+        popularCards = Tmdb.popular()
+        topCards = Tmdb.topRated()
+        trendingCards = heroes.map { Tmdb.Card(it.id, it.title, null) }
     }
 
     LaunchedEffect(heroes.size) {
@@ -98,54 +103,85 @@ fun HomeScreen() {
             onProfile = { ProfileStore.setActive(null) },
         )
 
-        Spacer(Modifier.height(6.dp))
-
-        HeroCarousel(
-            heroes = heroes,
-            index = index,
-            onDot = { index = it },
-            onAction = { lastAction = it },
-        )
-
-        Spacer(Modifier.height(18.dp))
-
-        Text(
-            "Continuar assistindo",
-            style = MaterialTheme.typography.headlineSmall.copy(fontSize = 17.sp),
-            color = Cine.TextPrimary,
-            modifier = Modifier.padding(start = Cine.ScreenMargin),
-        )
-
-        Spacer(Modifier.height(10.dp))
-
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(Cine.RowGap),
-            contentPadding = PaddingValues(horizontal = Cine.ScreenMargin, vertical = 6.dp),
+        LazyColumn(
+            modifier = Modifier.weight(1f),
+            contentPadding = PaddingValues(bottom = 30.dp),
         ) {
-            itemsIndexed(FakeRow) { i, item ->
-                LandscapeCard(
-                    item = item,
-                    url = stills.getOrNull(i),
-                    firstFocus = null,
-                    onClick = { lastAction = item.title },
+            item {
+                Spacer(Modifier.height(18.dp))
+                HeroCarousel(
+                    heroes = heroes,
+                    index = index,
+                    lastAction = lastAction,
+                    onDot = { index = it },
+                    onPlay = { lastAction = "Assistir ${heroes.getOrNull(index)?.title.orEmpty()}" },
                 )
             }
-        }
 
-        Spacer(Modifier.height(10.dp))
+            item {
+                Spacer(Modifier.height(34.dp))
+                RowTitle("Continuar assistindo")
+                Spacer(Modifier.height(14.dp))
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(Cine.RowGap),
+                    contentPadding = PaddingValues(horizontal = Cine.ScreenMargin),
+                ) {
+                    itemsIndexed(FakeRow) { i, item ->
+                        LandscapeCard(
+                            item = item,
+                            url = stills.getOrNull(i),
+                            onClick = { lastAction = item.title },
+                        )
+                    }
+                }
+            }
+
+            item {
+                Spacer(Modifier.height(30.dp))
+                RowTitle("Em alta agora")
+                Spacer(Modifier.height(14.dp))
+                PosterRow(trendingCards) { lastAction = it.title }
+            }
+
+            item {
+                Spacer(Modifier.height(30.dp))
+                RowTitle("Populares")
+                Spacer(Modifier.height(14.dp))
+                PosterRow(popularCards) { lastAction = it.title }
+            }
+
+            item {
+                Spacer(Modifier.height(30.dp))
+                RowTitle("Mais bem avaliadas")
+                Spacer(Modifier.height(14.dp))
+                PosterRow(topCards) { lastAction = it.title }
+            }
+        }
     }
 
     LaunchedEffect(Unit) { runCatching { firstFocus.requestFocus() } }
 }
 
 @Composable
+private fun RowTitle(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.headlineSmall.copy(fontSize = 17.sp),
+        color = Cine.TextPrimary,
+        modifier = Modifier.padding(horizontal = Cine.ScreenMargin),
+    )
+}
+
+@Composable
 private fun HeroCarousel(
     heroes: List<Tmdb.Hero>,
     index: Int,
+    lastAction: String,
     onDot: (Int) -> Unit,
-    onAction: (String) -> Unit,
+    onPlay: () -> Unit,
 ) {
     val hero = heroes.getOrNull(index)
+    var focused by remember { mutableStateOf(false) }
 
     Box(
         Modifier
@@ -153,7 +189,14 @@ private fun HeroCarousel(
             .padding(horizontal = Cine.ScreenMargin)
             .aspectRatio(2.6f)
             .clip(RoundedCornerShape(14.dp))
-            .background(Cine.Surface),
+            .background(Cine.Surface)
+            .border(
+                width = if (focused) 3.dp else 0.dp,
+                color = if (focused) Cine.TextPrimary else Color.Transparent,
+                shape = RoundedCornerShape(14.dp),
+            )
+            .onFocusChanged { focused = it.isFocused }
+            .clickable(onClick = onPlay),
     ) {
         if (hero?.backdrop != null) {
             AsyncImage(
@@ -183,11 +226,7 @@ private fun HeroCarousel(
                 .padding(start = 36.dp, end = 36.dp, bottom = 26.dp)
                 .fillMaxWidth(0.56f),
         ) {
-            Text(
-                "DESTAQUE",
-                style = MaterialTheme.typography.labelSmall,
-                color = Cine.TextSecondary,
-            )
+            Text("DESTAQUE", style = MaterialTheme.typography.labelSmall, color = Cine.TextSecondary)
 
             Spacer(Modifier.height(10.dp))
 
@@ -202,24 +241,34 @@ private fun HeroCarousel(
 
             Text(
                 hero?.overview?.takeIf { it.isNotBlank() }
-                    ?: "Sem sinopse em português para este título.",
+                    ?: "Sem sinopse em portugues para este titulo.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = Cine.TextSecondary,
                 maxLines = 2,
             )
 
-            Spacer(Modifier.height(16.dp))
-
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                ChipButton("Assistir", filled = true) { onAction("Assistir") }
-                ChipButton("Detalhes", filled = false) { onAction("Detalhes") }
+            if (focused) {
+                Spacer(Modifier.height(16.dp))
+                PlayBadge()
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    "selecionado: $lastAction",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Cine.TextSecondary,
+                )
             }
         }
 
         if (heroes.size > 1) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(7.dp),
-                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 22.dp, bottom = 22.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 22.dp, bottom = 22.dp)
+                    .clip(CircleShape)
+                    .background(Color(0x4D000000))
+                    .padding(horizontal = 11.dp, vertical = 8.dp),
             ) {
                 heroes.forEachIndexed { i, _ ->
                     Box(
@@ -236,56 +285,66 @@ private fun HeroCarousel(
 }
 
 @Composable
-private fun ChipButton(label: String, filled: Boolean, onClick: () -> Unit) {
-    var focused by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(if (focused) 1.04f else 1f)
-    val bg = when {
-        filled -> if (focused) Color.White else Color(0xFFE9E9EC)
-        focused -> Color(0x2EFFFFFF)
-        else -> Color(0x1AFFFFFF)
-    }
-
+private fun PlayBadge() {
     Box(
         Modifier
-            .offset(y = if (focused) (-2).dp else 0.dp)
-            .scale(scale)
-            .shadow(
-                elevation = if (focused) 16.dp else 0.dp,
-                shape = RoundedCornerShape(10.dp),
-                ambientColor = Color.Black,
-                spotColor = Color.Black,
-            )
-            .clip(RoundedCornerShape(10.dp))
-            .background(bg)
-            .border(
-                width = if (focused && !filled) 1.5.dp else if (filled) 0.dp else 1.dp,
-                color = when {
-                    filled -> Color.Transparent
-                    focused -> Color(0xCCFFFFFF)
-                    else -> Color(0x33FFFFFF)
-                },
-                shape = RoundedCornerShape(10.dp),
-            )
-            .onFocusChanged { focused = it.isFocused }
-            .clickable(onClick = onClick)
-            .padding(horizontal = 22.dp, vertical = 10.dp),
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color(0xFFE9E9EC))
+            .padding(horizontal = 20.dp, vertical = 10.dp),
     ) {
-        Text(
-            label,
-            color = if (filled) Color.Black else Cine.TextPrimary,
-            fontWeight = FontWeight.Medium,
-            fontSize = 13.sp,
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("▶", color = Color.Black, fontSize = 11.sp)
+            Spacer(Modifier.width(9.dp))
+            Text("Assistir", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        }
     }
 }
 
 @Composable
-private fun LandscapeCard(
-    item: FakeItem,
-    url: String?,
-    firstFocus: FocusRequester?,
-    onClick: () -> Unit,
-) {
+private fun PosterRow(cards: List<Tmdb.Card>, onClick: (Tmdb.Card) -> Unit) {
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(Cine.RowGap),
+        contentPadding = PaddingValues(horizontal = Cine.ScreenMargin),
+    ) {
+        items(cards) { card ->
+            PosterCard(card = card, onClick = { onClick(card) })
+        }
+    }
+}
+
+@Composable
+private fun PosterCard(card: Tmdb.Card, onClick: () -> Unit) {
+    var focused by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(if (focused) 1.05f else 1f)
+
+    Box(
+        Modifier
+            .width(150.dp)
+            .aspectRatio(2f / 3f)
+            .scale(scale)
+            .clip(RoundedCornerShape(10.dp))
+            .background(Cine.Surface)
+            .border(
+                width = if (focused) 3.dp else 0.dp,
+                color = if (focused) Cine.TextPrimary else Color.Transparent,
+                shape = RoundedCornerShape(10.dp),
+            )
+            .onFocusChanged { focused = it.isFocused }
+            .clickable(onClick = onClick),
+    ) {
+        if (card.poster != null) {
+            AsyncImage(
+                model = card.poster,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+    }
+}
+
+@Composable
+private fun LandscapeCard(item: FakeItem, url: String?, onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(if (focused) 1.04f else 1f)
 
@@ -294,20 +353,13 @@ private fun LandscapeCard(
             .width(196.dp)
             .aspectRatio(16f / 9f)
             .scale(scale)
-            .shadow(
-                elevation = if (focused) 14.dp else 0.dp,
-                shape = RoundedCornerShape(10.dp),
-                ambientColor = Color.Black,
-                spotColor = Color.Black,
-            )
             .clip(RoundedCornerShape(10.dp))
             .background(item.tone)
             .border(
-                width = if (focused) 2.dp else 0.dp,
-                color = if (focused) Color.White else Color.Transparent,
+                width = if (focused) 3.dp else 0.dp,
+                color = if (focused) Cine.TextPrimary else Color.Transparent,
                 shape = RoundedCornerShape(10.dp),
             )
-            .then(if (firstFocus != null) Modifier.focusRequester(firstFocus) else Modifier)
             .onFocusChanged { focused = it.isFocused }
             .clickable(onClick = onClick),
     ) {
