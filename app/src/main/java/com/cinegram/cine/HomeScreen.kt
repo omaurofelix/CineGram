@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -47,6 +48,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.cinegram.cine.profiles.ProfileStore
 import com.cinegram.design.Cine
+import kotlinx.coroutines.delay
 
 private const val SHOW_ID = 133808
 
@@ -65,7 +67,8 @@ private val FakeRow = listOf(
 fun HomeScreen() {
     val firstFocus = remember { FocusRequester() }
     var lastAction by remember { mutableStateOf("-") }
-    var heroUrl by remember { mutableStateOf<String?>(null) }
+    var heroes by remember { mutableStateOf<List<Tmdb.Hero>>(emptyList()) }
+    var index by remember { mutableStateOf(0) }
     var stills by remember { mutableStateOf<List<String?>>(emptyList()) }
 
     val profiles by ProfileStore.profiles.collectAsState()
@@ -73,114 +76,44 @@ fun HomeScreen() {
     val active = profiles.firstOrNull { it.id == activeId }
 
     LaunchedEffect(Unit) {
-        heroUrl = Tmdb.backdrop(SHOW_ID)
+        heroes = Tmdb.trending()
         stills = Tmdb.stills(SHOW_ID, 1)
     }
 
-    Column(Modifier.fillMaxSize().background(Cine.Bg)) {
-        Box(Modifier.fillMaxWidth().weight(1f)) {
-            val hero = heroUrl
-            if (hero != null) {
-                AsyncImage(
-                    model = hero,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            } else {
-                Box(
-                    Modifier.fillMaxSize().background(
-                        Brush.verticalGradient(
-                            colorStops = arrayOf(
-                                0f to Color(0xFF2A3842),
-                                0.55f to Color(0xCC10161B),
-                                1f to Cine.Bg,
-                            ),
-                        ),
-                    ),
-                )
-            }
-
-            // O escurecimento por cima, para o texto ficar legível sobre a arte.
-            Box(
-                Modifier.fillMaxSize().background(
-                    Brush.verticalGradient(
-                        colorStops = arrayOf(
-                            0f to Color(0x33000000),
-                            0.5f to Color(0x88000000),
-                            1f to Cine.Bg,
-                        ),
-                    ),
-                ),
-            )
-
-            CineHeader(
-                profile = active,
-                firstFocus = firstFocus,
-                onNav = { lastAction = it },
-                onSearch = { lastAction = "Buscar" },
-                onProfile = { ProfileStore.setActive(null) },
-            )
-
-            Column(
-                Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(start = Cine.ScreenMargin, end = Cine.ScreenMargin, bottom = 18.dp)
-                    .fillMaxWidth(0.58f),
-            ) {
-                Text(
-                    "CINEGRAM",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Cine.TextSecondary,
-                )
-
-                Spacer(Modifier.height(14.dp))
-
-                Text(
-                    "Tom Tem Dez Anos",
-                    style = MaterialTheme.typography.displaySmall.copy(fontSize = 46.sp),
-                    color = Cine.TextPrimary,
-                )
-
-                Spacer(Modifier.height(10.dp))
-
-                Text(
-                    "2021  ·  16  ·  2 temporadas",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Cine.TextSecondary,
-                )
-
-                Spacer(Modifier.height(18.dp))
-
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    PrimaryButton("Assistir") { lastAction = "Assistir" }
-                    GhostButton("Detalhes") { lastAction = "Detalhes" }
-                }
-
-                Spacer(Modifier.height(18.dp))
-
-                Text(
-                    "Depois de um evento catastrófico, uma pequena comunidade luta para sobreviver num mundo onde a escuridão é o maior perigo.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Cine.TextSecondary,
-                    maxLines = 3,
-                )
-
-                Spacer(Modifier.height(10.dp))
-
-                Text(
-                    "último toque: $lastAction",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Cine.TextSecondary,
-                )
+    LaunchedEffect(heroes.size) {
+        if (heroes.size > 1) {
+            while (true) {
+                delay(9000)
+                index = (index + 1) % heroes.size
             }
         }
+    }
+
+    Column(Modifier.fillMaxSize().background(Cine.Bg)) {
+        CineHeader(
+            profile = active,
+            firstFocus = firstFocus,
+            onNav = { lastAction = it },
+            onSearch = { lastAction = "Buscar" },
+            onProfile = { ProfileStore.setActive(null) },
+        )
+
+        Spacer(Modifier.height(6.dp))
+
+        HeroCarousel(
+            heroes = heroes,
+            index = index,
+            onDot = { index = it },
+            onAction = { lastAction = it },
+        )
+
+        Spacer(Modifier.height(18.dp))
 
         Text(
             "Continuar assistindo",
             style = MaterialTheme.typography.headlineSmall.copy(fontSize = 17.sp),
             color = Cine.TextPrimary,
-            modifier = Modifier.padding(start = Cine.ScreenMargin, top = 6.dp),
+            modifier = Modifier.padding(start = Cine.ScreenMargin),
         )
 
         Spacer(Modifier.height(10.dp))
@@ -189,20 +122,161 @@ fun HomeScreen() {
             horizontalArrangement = Arrangement.spacedBy(Cine.RowGap),
             contentPadding = PaddingValues(horizontal = Cine.ScreenMargin, vertical = 6.dp),
         ) {
-            itemsIndexed(FakeRow) { index, item ->
+            itemsIndexed(FakeRow) { i, item ->
                 LandscapeCard(
                     item = item,
-                    url = stills.getOrNull(index),
+                    url = stills.getOrNull(i),
                     firstFocus = null,
                     onClick = { lastAction = item.title },
                 )
             }
         }
 
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(10.dp))
     }
 
     LaunchedEffect(Unit) { runCatching { firstFocus.requestFocus() } }
+}
+
+@Composable
+private fun HeroCarousel(
+    heroes: List<Tmdb.Hero>,
+    index: Int,
+    onDot: (Int) -> Unit,
+    onAction: (String) -> Unit,
+) {
+    val hero = heroes.getOrNull(index)
+
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Cine.ScreenMargin)
+            .aspectRatio(2.6f)
+            .clip(RoundedCornerShape(14.dp))
+            .background(Cine.Surface),
+    ) {
+        if (hero?.backdrop != null) {
+            AsyncImage(
+                model = hero.backdrop,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+
+        // Degrade da esquerda, para o texto ficar legivel sobre a arte.
+        Box(
+            Modifier.fillMaxSize().background(
+                Brush.horizontalGradient(
+                    colorStops = arrayOf(
+                        0f to Color(0xE6000000),
+                        0.45f to Color(0x99000000),
+                        0.75f to Color(0x11000000),
+                    ),
+                ),
+            ),
+        )
+
+        Column(
+            Modifier
+                .align(Alignment.BottomStart)
+                .padding(start = 36.dp, end = 36.dp, bottom = 26.dp)
+                .fillMaxWidth(0.56f),
+        ) {
+            Text(
+                "DESTAQUE",
+                style = MaterialTheme.typography.labelSmall,
+                color = Cine.TextSecondary,
+            )
+
+            Spacer(Modifier.height(10.dp))
+
+            Text(
+                hero?.title ?: "Carregando",
+                style = MaterialTheme.typography.displaySmall.copy(fontSize = 40.sp),
+                color = Cine.TextPrimary,
+                maxLines = 1,
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            Text(
+                hero?.overview?.takeIf { it.isNotBlank() }
+                    ?: "Sem sinopse em português para este título.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Cine.TextSecondary,
+                maxLines = 2,
+            )
+
+            Spacer(Modifier.height(16.dp))
+
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                ChipButton("Assistir", filled = true) { onAction("Assistir") }
+                ChipButton("Detalhes", filled = false) { onAction("Detalhes") }
+            }
+        }
+
+        if (heroes.size > 1) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(7.dp),
+                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 22.dp, bottom = 22.dp),
+            ) {
+                heroes.forEachIndexed { i, _ ->
+                    Box(
+                        Modifier
+                            .size(if (i == index) 9.dp else 7.dp)
+                            .clip(CircleShape)
+                            .background(if (i == index) Cine.TextPrimary else Color(0x66FFFFFF))
+                            .clickable { onDot(i) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChipButton(label: String, filled: Boolean, onClick: () -> Unit) {
+    var focused by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(if (focused) 1.04f else 1f)
+    val bg = when {
+        filled -> if (focused) Color.White else Color(0xFFE9E9EC)
+        focused -> Color(0x2EFFFFFF)
+        else -> Color(0x1AFFFFFF)
+    }
+
+    Box(
+        Modifier
+            .offset(y = if (focused) (-2).dp else 0.dp)
+            .scale(scale)
+            .shadow(
+                elevation = if (focused) 16.dp else 0.dp,
+                shape = RoundedCornerShape(10.dp),
+                ambientColor = Color.Black,
+                spotColor = Color.Black,
+            )
+            .clip(RoundedCornerShape(10.dp))
+            .background(bg)
+            .border(
+                width = if (focused && !filled) 1.5.dp else if (filled) 0.dp else 1.dp,
+                color = when {
+                    filled -> Color.Transparent
+                    focused -> Color(0xCCFFFFFF)
+                    else -> Color(0x33FFFFFF)
+                },
+                shape = RoundedCornerShape(10.dp),
+            )
+            .onFocusChanged { focused = it.isFocused }
+            .clickable(onClick = onClick)
+            .padding(horizontal = 22.dp, vertical = 10.dp),
+    ) {
+        Text(
+            label,
+            color = if (filled) Color.Black else Cine.TextPrimary,
+            fontWeight = FontWeight.Medium,
+            fontSize = 13.sp,
+        )
+    }
 }
 
 @Composable
@@ -222,16 +296,16 @@ private fun LandscapeCard(
             .scale(scale)
             .shadow(
                 elevation = if (focused) 14.dp else 0.dp,
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(10.dp),
                 ambientColor = Color.Black,
                 spotColor = Color.Black,
             )
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(10.dp))
             .background(item.tone)
             .border(
                 width = if (focused) 2.dp else 0.dp,
                 color = if (focused) Color.White else Color.Transparent,
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(10.dp),
             )
             .then(if (firstFocus != null) Modifier.focusRequester(firstFocus) else Modifier)
             .onFocusChanged { focused = it.isFocused }
@@ -262,60 +336,5 @@ private fun LandscapeCard(
                     .background(Cine.Accent),
             )
         }
-    }
-}
-
-@Composable
-private fun PrimaryButton(label: String, onClick: () -> Unit) {
-    var focused by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(if (focused) 1.04f else 1f)
-
-    Box(
-        Modifier
-            .offset(y = if (focused) (-2).dp else 0.dp)
-            .scale(scale)
-            .shadow(
-                elevation = if (focused) 18.dp else 0.dp,
-                shape = CircleShape,
-                ambientColor = Color.Black,
-                spotColor = Color.Black,
-            )
-            .clip(CircleShape)
-            .background(Color(0xFFE9E9EC))
-            .onFocusChanged { focused = it.isFocused }
-            .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 9.dp),
-    ) {
-        Text(label, color = Color.Black, fontWeight = FontWeight.Medium, fontSize = 13.sp)
-    }
-}
-
-@Composable
-private fun GhostButton(label: String, onClick: () -> Unit) {
-    var focused by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(if (focused) 1.04f else 1f)
-
-    Box(
-        Modifier
-            .offset(y = if (focused) (-2).dp else 0.dp)
-            .scale(scale)
-            .shadow(
-                elevation = if (focused) 18.dp else 0.dp,
-                shape = CircleShape,
-                ambientColor = Color.Black,
-                spotColor = Color.Black,
-            )
-            .clip(CircleShape)
-            .background(if (focused) Color(0x2EFFFFFF) else Color(0x14FFFFFF))
-            .border(
-                width = if (focused) 1.5.dp else 1.dp,
-                color = if (focused) Color(0xCCFFFFFF) else Color(0x33FFFFFF),
-                shape = CircleShape,
-            )
-            .onFocusChanged { focused = it.isFocused }
-            .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 9.dp),
-    ) {
-        Text(label, color = Cine.TextPrimary, fontSize = 13.sp)
     }
 }
