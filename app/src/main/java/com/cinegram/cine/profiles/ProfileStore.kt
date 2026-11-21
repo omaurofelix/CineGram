@@ -33,7 +33,6 @@ object ProfileStore {
     fun init(context: Context) {
         file = File(context.filesDir, FILE_NAME)
         _profiles.value = read()
-        _activeId.value = _profiles.value.firstOrNull()?.id
     }
 
     suspend fun add(profile: Profile): Boolean = mutex.withLock {
@@ -54,7 +53,7 @@ object ProfileStore {
         val next = _profiles.value.filterNot { it.id == id }
         write(next)
         _profiles.value = next
-        if (_activeId.value == id) _activeId.value = next.firstOrNull()?.id
+        if (_activeId.value == id) _activeId.value = null
     }
 
     fun setActive(id: String?) {
