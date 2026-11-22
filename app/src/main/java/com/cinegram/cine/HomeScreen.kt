@@ -60,6 +60,13 @@ import com.cinegram.cine.profiles.ProfileStore
 import com.cinegram.design.Cine
 import kotlinx.coroutines.delay
 
+private val HomeBackdrop = Brush.verticalGradient(
+    colorStops = arrayOf(
+        0f to Color(0xFF16243B),
+        0.32f to Color(0xFF0A1220),
+        1f to Color(0xFF000000),
+    ),
+)
 private const val SHOW_ID = 133808
 private const val MAX_HEROES = 6
 
@@ -110,7 +117,7 @@ fun HomeScreen() {
         }
     }
 
-    Column(Modifier.fillMaxSize().background(Cine.Bg)) {
+    Column(Modifier.fillMaxSize().background(HomeBackdrop)) {
         CineHeader(
             profile = active,
             firstFocus = inicioFocus,
