@@ -2,7 +2,6 @@ package com.cinegram.cine
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -32,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -45,10 +45,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -62,6 +58,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.cinegram.cine.profiles.ProfileStore
 import com.cinegram.design.Cine
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -104,6 +101,7 @@ fun HomeScreen() {
     var stills by remember { mutableStateOf<List<String?>>(emptyList()) }
     var index by remember { mutableStateOf(0) }
     var lastAction by remember { mutableStateOf("-") }
+    val logos = remember { mutableStateMapOf<Int, String?>() }
 
     val profiles by ProfileStore.profiles.collectAsState()
     val activeId by ProfileStore.activeId.collectAsState()
@@ -135,28 +133,34 @@ fun HomeScreen() {
         }
     }
 
+    LaunchedEffect(index, heroes.size) {
+        val hero = heroes.getOrNull(index) ?: return@LaunchedEffect
+        if (!logos.containsKey(hero.id)) {
+            logos[hero.id] = Tmdb.logo(hero.id)
+        }
+    }
+
     Column(Modifier.fillMaxSize().background(HomeBackdrop)) {
+        CineHeader(
+            profile = active,
+            firstFocus = inicioFocus,
+            onNav = { lastAction = it },
+            onSearch = { lastAction = "Buscar" },
+            onProfile = { ProfileStore.setActive(null) },
+        )
+
         LazyColumn(
             modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(bottom = 60.dp),
         ) {
             item {
-                CineHeader(
-                    profile = active,
-                    firstFocus = inicioFocus,
-                    onNav = { lastAction = it },
-                    onSearch = { lastAction = "Buscar" },
-                    onProfile = { ProfileStore.setActive(null) },
-                )
-            }
-
-            item {
                 Column {
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(10.dp))
                     HeroCarousel(
                         heroes = heroes,
                         index = index,
                         lastAction = lastAction,
+                        logos = logos,
                         upFocus = inicioFocus,
                         downFocus = firstCardFocus,
                         onDot = { index = it },
@@ -179,7 +183,7 @@ fun HomeScreen() {
                             horizontalArrangement = Arrangement.spacedBy(Cine.RowGap),
                             contentPadding = PaddingValues(horizontal = Cine.ScreenMargin),
                         ) {
-                            itemsIndexed(FakeRow) { i, item ->
+                            itemsIndexed(FakeRow, key = { _, item -> item.title }) { i, item ->
                                 LandscapeCard(
                                     item = item,
                                     url = stills.getOrNull(i),
@@ -197,7 +201,7 @@ fun HomeScreen() {
                     Spacer(Modifier.height(26.dp))
                     RowTitle("Em alta agora")
                     RowSlot(ExpandRowHeight, Alignment.TopStart) {
-                        ExpandRow(trendingCards) { lastAction = it.title }
+                        ExpandRow(trendingCards, logos) { lastAction = it.title }
                     }
                 }
             }
@@ -207,7 +211,7 @@ fun HomeScreen() {
                     Spacer(Modifier.height(26.dp))
                     RowTitle("Populares")
                     RowSlot(ExpandRowHeight, Alignment.TopStart) {
-                        ExpandRow(popularCards) { lastAction = it.title }
+                        ExpandRow(popularCards, logos) { lastAction = it.title }
                     }
                 }
             }
@@ -217,7 +221,7 @@ fun HomeScreen() {
                     Spacer(Modifier.height(26.dp))
                     RowTitle("Mais bem avaliadas")
                     RowSlot(ExpandRowHeight, Alignment.TopStart) {
-                        ExpandRow(topCards) { lastAction = it.title }
+                        ExpandRow(topCards, logos) { lastAction = it.title }
                     }
                 }
             }
@@ -256,6 +260,7 @@ private fun HeroCarousel(
     heroes: List<Tmdb.Hero>,
     index: Int,
     lastAction: String,
+    logos: Map<Int, String?>,
     upFocus: FocusRequester,
     downFocus: FocusRequester,
     onDot: (Int) -> Unit,
@@ -263,13 +268,14 @@ private fun HeroCarousel(
     onPlay: () -> Unit,
 ) {
     val hero = heroes.getOrNull(index)
+    val logo = hero?.let { logos[it.id] }
     var focused by remember { mutableStateOf(false) }
 
     Box(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = Cine.ScreenMargin)
-            .aspectRatio(2.6f)
+            .padding(horizontal = 24.dp)
+            .aspectRatio(2.2f)
             .clip(RoundedCornerShape(14.dp))
             .background(Cine.Surface)
             .border(
@@ -324,20 +330,30 @@ private fun HeroCarousel(
             Modifier
                 .align(Alignment.BottomStart)
                 .padding(start = 36.dp, end = 36.dp, bottom = 26.dp)
-                .fillMaxWidth(0.56f),
+                .fillMaxWidth(0.62f),
         ) {
             Text("DESTAQUE", style = MaterialTheme.typography.labelSmall, color = Cine.TextSecondary)
 
             Spacer(Modifier.height(10.dp))
 
-            Text(
-                hero?.title ?: "Carregando",
-                style = MaterialTheme.typography.displaySmall.copy(fontSize = 34.sp),
-                color = Cine.TextPrimary,
-                maxLines = 2,
-            )
+            if (logo != null) {
+                AsyncImage(
+                    model = logo,
+                    contentDescription = hero?.title,
+                    contentScale = ContentScale.Fit,
+                    alignment = Alignment.CenterStart,
+                    modifier = Modifier.height(66.dp).fillMaxWidth(),
+                )
+            } else {
+                Text(
+                    hero?.title ?: "Carregando",
+                    style = MaterialTheme.typography.displaySmall.copy(fontSize = 34.sp),
+                    color = Cine.TextPrimary,
+                    maxLines = 2,
+                )
+            }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(10.dp))
 
             Text(
                 hero?.overview?.takeIf { it.isNotBlank() }
@@ -346,34 +362,23 @@ private fun HeroCarousel(
                 color = Cine.TextSecondary,
                 maxLines = 2,
             )
-
-            if (focused) {
-                Spacer(Modifier.height(16.dp))
-                PlayBadge()
-                Spacer(Modifier.height(10.dp))
-                Text(
-                    "selecionado: $lastAction",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Cine.TextSecondary,
-                )
-            }
         }
 
         if (heroes.size > 1) {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(5.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(end = 22.dp, bottom = 22.dp)
-                    .clip(RoundedCornerShape(10.dp))
+                    .padding(end = 18.dp, bottom = 18.dp)
+                    .clip(RoundedCornerShape(8.dp))
                     .background(Color(0x4DFFFFFF))
-                    .padding(horizontal = 12.dp, vertical = 9.dp),
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
             ) {
                 heroes.forEachIndexed { i, _ ->
                     Box(
                         Modifier
-                            .size(8.dp)
+                            .size(5.dp)
                             .clip(CircleShape)
                             .background(if (i == index) Color.White else Color(0xB3FFFFFF))
                             .clickable { onDot(i) },
@@ -385,41 +390,11 @@ private fun HeroCarousel(
 }
 
 @Composable
-private fun PlayBadge() {
-    Box(
-        Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(Color(0xFFE9E9EC))
-            .padding(horizontal = 20.dp, vertical = 10.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            PlayGlyph(Color.Black)
-            Spacer(Modifier.width(10.dp))
-            Text("Assistir", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-        }
-    }
-}
-
-@Composable
-private fun PlayGlyph(tint: Color) {
-    Canvas(Modifier.size(width = 11.dp, height = 12.dp)) {
-        val stroke = 1.7.dp.toPx()
-        val path = Path().apply {
-            moveTo(stroke, stroke)
-            lineTo(size.width - stroke, size.height / 2f)
-            lineTo(stroke, size.height - stroke)
-            close()
-        }
-        drawPath(
-            path = path,
-            color = tint,
-            style = Stroke(width = stroke, join = StrokeJoin.Round, cap = StrokeCap.Round),
-        )
-    }
-}
-
-@Composable
-private fun ExpandRow(cards: List<Tmdb.Card>, onClick: (Tmdb.Card) -> Unit) {
+private fun ExpandRow(
+    cards: List<Tmdb.Card>,
+    logos: Map<Int, String?>,
+    onClick: (Tmdb.Card) -> Unit,
+) {
     val listState = rememberLazyListState()
 
     LazyRow(
@@ -427,11 +402,12 @@ private fun ExpandRow(cards: List<Tmdb.Card>, onClick: (Tmdb.Card) -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(Cine.RowGap),
         contentPadding = PaddingValues(horizontal = Cine.ScreenMargin),
     ) {
-        itemsIndexed(cards) { index, card ->
+        itemsIndexed(cards, key = { _, card -> card.id }) { index, card ->
             ExpandCard(
                 card = card,
                 index = index,
                 listState = listState,
+                logos = logos,
                 onClick = { onClick(card) },
             )
         }
@@ -443,18 +419,23 @@ private fun ExpandCard(
     card: Tmdb.Card,
     index: Int,
     listState: LazyListState,
+    logos: Map<Int, String?>,
     onClick: () -> Unit,
 ) {
     var focused by remember { mutableStateOf(false) }
+    var expanded by remember { mutableStateOf(false) }
+    var job by remember { mutableStateOf<Job?>(null) }
     val scope = rememberCoroutineScope()
+    val logo = logos[card.id]
+
     val width by animateDpAsState(
-        targetValue = if (focused) ExpandedCardWidth else CardWidth,
-        animationSpec = tween(200),
+        targetValue = if (expanded) ExpandedCardWidth else CardWidth,
+        animationSpec = tween(180),
         label = "cardWidth",
     )
     val height by animateDpAsState(
-        targetValue = if (focused) ExpandedHeight else PosterHeight,
-        animationSpec = tween(200),
+        targetValue = if (expanded) ExpandedHeight else PosterHeight,
+        animationSpec = tween(180),
         label = "cardHeight",
     )
 
@@ -470,15 +451,24 @@ private fun ExpandCard(
                     color = if (focused) Cine.TextPrimary else Color.Transparent,
                     shape = RoundedCornerShape(6.dp),
                 )
-                .onFocusChanged {
-                    focused = it.isFocused
-                    if (it.isFocused) {
-                        scope.launch { listState.animateScrollToItem(index) }
+                .onFocusChanged { state ->
+                    focused = state.isFocused
+                    job?.cancel()
+                    if (state.isFocused) {
+                        job = scope.launch {
+                            listState.animateScrollToItem(index)
+                            if (!logos.containsKey(card.id)) {
+                                logos[card.id] = Tmdb.logo(card.id)
+                            }
+                            expanded = true
+                        }
+                    } else {
+                        expanded = false
                     }
                 }
                 .clickable(onClick = onClick),
         ) {
-            val art = if (focused) card.backdrop ?: card.poster else card.poster ?: card.backdrop
+            val art = if (expanded) card.backdrop ?: card.poster else card.poster ?: card.backdrop
             if (art != null) {
                 AsyncImage(
                     model = art,
@@ -488,41 +478,56 @@ private fun ExpandCard(
                 )
             }
 
-            if (focused) {
+            if (expanded) {
                 Box(
                     Modifier
                         .fillMaxWidth()
-                        .height(52.dp)
+                        .height(56.dp)
                         .align(Alignment.BottomStart)
                         .background(
                             Brush.verticalGradient(listOf(Color(0x00000000), Color(0xD9000000))),
                         ),
                 )
 
-                Text(
-                    card.title,
-                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.sp),
-                    color = Cine.TextPrimary,
-                    maxLines = 1,
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(horizontal = 10.dp, vertical = 8.dp),
-                )
+                if (logo != null) {
+                    AsyncImage(
+                        model = logo,
+                        contentDescription = card.title,
+                        contentScale = ContentScale.Fit,
+                        alignment = Alignment.CenterStart,
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .height(34.dp)
+                            .fillMaxWidth(0.7f)
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                    )
+                } else {
+                    Text(
+                        card.title,
+                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.sp),
+                        color = Cine.TextPrimary,
+                        maxLines = 1,
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                    )
+                }
             }
         }
 
-        if (focused) {
+        if (expanded) {
             Column(Modifier.padding(top = 10.dp, end = 8.dp)) {
                 Text(
                     card.meta,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Cine.TextSecondary,
+                    style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),
+                    color = Cine.TextPrimary,
+                    fontWeight = FontWeight.Bold,
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
                     card.overview.ifBlank { "Sem sinopse em portugues para este titulo." },
                     style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.sp),
-                    color = Cine.TextPrimary,
+                    color = Cine.TextSecondary,
                     maxLines = 3,
                 )
             }
