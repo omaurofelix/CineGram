@@ -21,11 +21,34 @@ private val CineScheme = darkColorScheme(
     onPrimary = Cine.TextPrimary,
 )
 
+private val BaseType = Typography()
+
+private fun TextStyle.sf() = copy(fontFamily = SfPro)
+
 private val CineTypography = Typography(
-    displaySmall = TextStyle(fontSize = 44.sp, fontWeight = FontWeight.Light, letterSpacing = (-0.5).sp),
-    headlineSmall = TextStyle(fontSize = 22.sp, fontWeight = FontWeight.Normal),
-    bodyMedium = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Normal),
-    labelSmall = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.6.sp),
+    displayLarge = BaseType.displayLarge.sf(),
+    displayMedium = BaseType.displayMedium.sf(),
+    displaySmall = BaseType.displaySmall.sf().copy(
+        fontSize = 44.sp,
+        fontWeight = FontWeight.Light,
+        letterSpacing = (-0.5).sp,
+    ),
+    headlineLarge = BaseType.headlineLarge.sf(),
+    headlineMedium = BaseType.headlineMedium.sf(),
+    headlineSmall = BaseType.headlineSmall.sf().copy(fontSize = 22.sp),
+    titleLarge = BaseType.titleLarge.sf(),
+    titleMedium = BaseType.titleMedium.sf(),
+    titleSmall = BaseType.titleSmall.sf(),
+    bodyLarge = BaseType.bodyLarge.sf(),
+    bodyMedium = BaseType.bodyMedium.sf().copy(fontSize = 15.sp),
+    bodySmall = BaseType.bodySmall.sf(),
+    labelLarge = BaseType.labelLarge.sf(),
+    labelMedium = BaseType.labelMedium.sf(),
+    labelSmall = BaseType.labelSmall.sf().copy(
+        fontSize = 11.sp,
+        fontWeight = FontWeight.Medium,
+        letterSpacing = 1.6.sp,
+    ),
 )
 
 @Composable
