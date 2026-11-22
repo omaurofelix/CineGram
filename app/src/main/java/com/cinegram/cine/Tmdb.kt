@@ -93,8 +93,8 @@ object Tmdb {
      * Arte oficial do titulo, aquela com a tipografia própria de cada obra.
      * Prefere portugues, depois ingles, depois qualquer idioma.
      */
-    suspend fun logo(tvId: Int): String? {
-        val body = get("/tv/$tvId/images?include_image_language=pt,en,null") ?: return null
+    suspend fun logo(media: String, id: Int): String? {
+        val body = get("/$media/$id/images?include_image_language=pt,en,null") ?: return null
         return runCatching {
             val logos = JSONObject(body).optJSONArray("logos") ?: return@runCatching null
             val found = (0 until logos.length()).mapNotNull { i ->
@@ -127,8 +127,8 @@ object Tmdb {
     }
 
     /** Destaques da semana, usados no carrossel do topo da home. */
-    suspend fun trending(): List<Hero> {
-        val body = get("/trending/tv/week") ?: return emptyList()
+    suspend fun trending(media: String): List<Hero> {
+        val body = get("/trending/$media/week") ?: return emptyList()
         return runCatching {
             val results = JSONObject(body).optJSONArray("results") ?: return emptyList()
             (0 until results.length()).mapNotNull { i ->
@@ -182,7 +182,7 @@ object Tmdb {
         }.getOrDefault(emptyList())
     }
 
-    suspend fun popular(): List<Card> = cards("/tv/popular")
+    suspend fun popular(media: String): List<Card> = cards("/$media/popular")
 
-    suspend fun topRated(): List<Card> = cards("/tv/top_rated")
+    suspend fun topRated(media: String): List<Card> = cards("/$media/top_rated")
 }
