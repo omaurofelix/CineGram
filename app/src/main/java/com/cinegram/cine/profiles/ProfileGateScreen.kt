@@ -1,5 +1,6 @@
 package com.cinegram.cine.profiles
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -44,6 +45,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
@@ -62,9 +64,13 @@ private val AvatarFaces = listOf(
     Color(0xFFA06BF5) to Color(0xFF4A1EA8),
 )
 
+private val GateBackground = Color(0xFF1E1E1E)
 private val NetflixGray = Color(0xFFB3B3B3)
+private val AddCircleGray = Color(0xFF3A3A3A)
+private val AddCrossGray = Color(0xFFB8B8B8)
 private val TileSize = 118.dp
 private val TileSlot = 126.dp
+private val AddCircleSize = 80.dp
 
 @Composable
 fun ProfileGateScreen() {
@@ -75,7 +81,7 @@ fun ProfileGateScreen() {
     var creating by remember { mutableStateOf(false) }
     var managing by remember { mutableStateOf(false) }
 
-    Box(Modifier.fillMaxSize().background(Color.Black)) {
+    Box(Modifier.fillMaxSize().background(GateBackground)) {
         Column(
             Modifier
                 .fillMaxSize()
@@ -164,12 +170,18 @@ fun ProfileGateScreen() {
 @Composable
 private fun ProfileTile(profile: Profile, firstFocus: FocusRequester?, onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(if (focused) 1.15f else 1f, label = "profileScale")
     val face = AvatarFaces[profile.avatar % AvatarFaces.size]
 
-    Column(horizontalAlignment = Alignment.Start) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             Modifier
-                .size(TileSlot)
+                .width(TileSlot)
+                .height(TileSlot)
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                }
                 .border(
                     width = 3.dp,
                     color = if (focused) Color.White else Color.Transparent,
@@ -214,6 +226,7 @@ private fun ProfileTile(profile: Profile, firstFocus: FocusRequester?, onClick: 
             profile.name,
             style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
             color = if (focused) Color.White else NetflixGray,
+            textAlign = TextAlign.Center,
         )
     }
 }
@@ -221,40 +234,48 @@ private fun ProfileTile(profile: Profile, firstFocus: FocusRequester?, onClick: 
 @Composable
 private fun AddTile(onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(if (focused) 1.15f else 1f, label = "addScale")
 
-    Column(horizontalAlignment = Alignment.Start) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             Modifier
-                .size(TileSlot)
-                .border(
-                    width = 3.dp,
-                    color = if (focused) Color.White else Color.Transparent,
-                    shape = RectangleShape,
-                )
+                .width(TileSlot)
+                .height(TileSlot)
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                }
                 .onFocusChanged { focused = it.isFocused }
                 .clickable(onClick = onClick),
             contentAlignment = Alignment.Center,
         ) {
             Box(
                 Modifier
-                    .size(TileSize)
+                    .size(AddCircleSize)
                     .clip(CircleShape)
-                    .background(Color.White),
+                    .background(AddCircleGray)
+                    .then(
+                        if (focused) {
+                            Modifier.border(3.dp, Color.White, CircleShape)
+                        } else {
+                            Modifier
+                        },
+                    ),
             ) {
                 Canvas(Modifier.fillMaxSize()) {
                     val w = size.width
                     val h = size.height
-                    val thickness = w * 0.05f
-                    val arm = w * 0.18f
+                    val thickness = w * 0.11f
+                    val arm = w * 0.22f
                     drawLine(
-                        Color.Black,
+                        AddCrossGray,
                         Offset(w * 0.5f, h * 0.5f - arm),
                         Offset(w * 0.5f, h * 0.5f + arm),
                         strokeWidth = thickness,
                         cap = StrokeCap.Round,
                     )
                     drawLine(
-                        Color.Black,
+                        AddCrossGray,
                         Offset(w * 0.5f - arm, h * 0.5f),
                         Offset(w * 0.5f + arm, h * 0.5f),
                         strokeWidth = thickness,
@@ -270,6 +291,7 @@ private fun AddTile(onClick: () -> Unit) {
             "Adicionar perfil",
             style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
             color = if (focused) Color.White else NetflixGray,
+            textAlign = TextAlign.Center,
         )
     }
 }
