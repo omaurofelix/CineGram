@@ -1,6 +1,6 @@
 package com.cinegram.cine.profiles
 
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -38,41 +37,34 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.cinegram.design.Cine
 import com.tmplayer.R
 import kotlinx.coroutines.launch
 import java.util.UUID
 
-private val AvatarColors = listOf(
-    Color(0xFF3B4A5A),
-    Color(0xFF5A3B45),
-    Color(0xFF3B5A44),
-    Color(0xFF4A3B5A),
-    Color(0xFF5A4F3B),
-    Color(0xFF3B525A),
+private val AvatarFaces = listOf(
+    Color(0xFF4FA8F5) to Color(0xFF0B5FC0),
+    Color(0xFF3E8F9E) to Color(0xFF0B2E38),
+    Color(0xFFF0413C) to Color(0xFFA8121E),
+    Color(0xFFF5C443) to Color(0xFFC08A0B),
+    Color(0xFF4BC98A) to Color(0xFF12805A),
+    Color(0xFFA06BF5) to Color(0xFF4A1EA8),
 )
 
-private val GateLight = Color(0xFFD6E0EB)
-private val GateLightFocused = Color(0xFFFFFFFF)
-private val GateInk = Color(0xFF0D1B2B)
-
-private val GateBackdrop = Brush.verticalGradient(
-    colorStops = arrayOf(
-        0f to Color(0xFF1B4C86),
-        0.28f to Color(0xFF14325A),
-        0.6f to Color(0xFF0C1A2B),
-        1f to Cine.Bg,
-    ),
-)
+private val NetflixGray = Color(0xFFB3B3B3)
+private val TileSize = 118.dp
+private val TileSlot = 126.dp
 
 @Composable
 fun ProfileGateScreen() {
@@ -80,21 +72,19 @@ fun ProfileGateScreen() {
     val firstFocus = remember { FocusRequester() }
     val scope = rememberCoroutineScope()
 
-    var askingPin by remember { mutableStateOf<Profile?>(null) }
     var creating by remember { mutableStateOf(false) }
     var managing by remember { mutableStateOf(false) }
 
-    Box(Modifier.fillMaxSize().background(GateBackdrop)) {
+    Box(Modifier.fillMaxSize().background(Color.Black)) {
         Column(
             Modifier
                 .fillMaxSize()
-                .padding(horizontal = Cine.ScreenMargin),
+                .padding(horizontal = 56.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
         ) {
-            Spacer(Modifier.height(46.dp))
-
             Box(
-                Modifier.fillMaxWidth().height(46.dp),
+                Modifier.fillMaxWidth().height(96.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Image(
@@ -105,37 +95,28 @@ fun ProfileGateScreen() {
                 )
             }
 
-            Spacer(Modifier.height(30.dp))
+            Spacer(Modifier.height(28.dp))
 
             Text(
                 "Quem está assistindo?",
-                style = MaterialTheme.typography.headlineSmall.copy(fontSize = 34.sp),
-                color = Cine.TextPrimary,
+                style = MaterialTheme.typography.headlineMedium.copy(fontSize = 40.sp),
+                color = Color.White,
                 textAlign = TextAlign.Center,
             )
 
-            Spacer(Modifier.height(36.dp))
+            Spacer(Modifier.height(30.dp))
 
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(28.dp),
-                verticalAlignment = Alignment.Top,
-            ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(22.dp)) {
                 profiles.forEach { profile ->
-                    ProfileCard(
+                    ProfileTile(
                         profile = profile,
                         firstFocus = if (profile == profiles.first()) firstFocus else null,
-                        onClick = {
-                            if (profile.pin.isNullOrEmpty()) {
-                                ProfileStore.setActive(profile.id)
-                            } else {
-                                askingPin = profile
-                            }
-                        },
+                        onClick = { ProfileStore.setActive(profile.id) },
                     )
                 }
 
                 if (profiles.size < ProfileStore.MAX_PROFILES) {
-                    AddCard(onClick = { creating = true })
+                    AddTile(onClick = { creating = true })
                 }
             }
 
@@ -151,29 +132,18 @@ fun ProfileGateScreen() {
         }
     }
 
-    askingPin?.let { profile ->
-        PinDialog(
-            profile = profile,
-            onDismiss = { askingPin = null },
-            onCorrect = {
-                ProfileStore.setActive(profile.id)
-                askingPin = null
-            },
-        )
-    }
-
     if (creating) {
         CreateDialog(
             onDismiss = { creating = false },
-            onCreate = { name, kid, pin ->
+            onCreate = { name, kid ->
                 scope.launch {
                     ProfileStore.add(
                         Profile(
                             id = UUID.randomUUID().toString(),
                             name = name,
-                            avatar = profiles.size % AvatarColors.size,
+                            avatar = profiles.size % AvatarFaces.size,
                             kid = kid,
-                            pin = pin,
+                            pin = null,
                         ),
                     )
                 }
@@ -192,93 +162,114 @@ fun ProfileGateScreen() {
 }
 
 @Composable
-private fun ProfileCard(profile: Profile, firstFocus: FocusRequester?, onClick: () -> Unit) {
+private fun ProfileTile(profile: Profile, firstFocus: FocusRequester?, onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(if (focused) 1.12f else 1f, label = "profileScale")
+    val face = AvatarFaces[profile.avatar % AvatarFaces.size]
 
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.width(132.dp),
-    ) {
+    Column(horizontalAlignment = Alignment.Start) {
         Box(
             Modifier
-                .size(96.dp)
-                .graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
-                }
-                .clip(CircleShape)
-                .background(AvatarColors[profile.avatar % AvatarColors.size])
+                .size(TileSlot)
                 .border(
-                    width = if (focused) Cine.FocusRingWidth else 0.dp,
-                    color = if (focused) Cine.FocusRing else Color.Transparent,
-                    shape = CircleShape,
+                    width = 3.dp,
+                    color = if (focused) Color.White else Color.Transparent,
+                    shape = RectangleShape,
                 )
                 .onFocusChanged { focused = it.isFocused }
                 .then(if (firstFocus != null) Modifier.focusRequester(firstFocus) else Modifier)
                 .clickable(onClick = onClick),
             contentAlignment = Alignment.Center,
         ) {
-            Text(
-                profile.name.take(1).uppercase(),
-                fontSize = 34.sp,
-                color = Cine.TextPrimary,
-                fontWeight = FontWeight.Light,
-            )
+            Box(
+                Modifier
+                    .size(TileSize)
+                    .background(
+                        Brush.verticalGradient(listOf(face.first, face.second)),
+                        RectangleShape,
+                    ),
+            ) {
+                Canvas(Modifier.fillMaxSize()) {
+                    val w = size.width
+                    val h = size.height
+                    val eye = w * 0.055f
+                    drawCircle(Color.White, eye, Offset(w * 0.30f, h * 0.30f))
+                    drawCircle(Color.White, eye, Offset(w * 0.70f, h * 0.30f))
+                    val r = w * 0.23f
+                    drawArc(
+                        color = Color.White,
+                        startAngle = 20f,
+                        sweepAngle = 140f,
+                        useCenter = false,
+                        topLeft = Offset(w * 0.5f - r, h * 0.40f - r),
+                        size = Size(r * 2, r * 2),
+                        style = Stroke(width = w * 0.022f, cap = StrokeCap.Round),
+                    )
+                }
+            }
         }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(10.dp))
 
         Text(
             profile.name,
-            style = MaterialTheme.typography.bodyMedium,
-            color = if (focused) Cine.TextPrimary else Cine.TextSecondary,
-            textAlign = TextAlign.Center,
+            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+            color = if (focused) Color.White else NetflixGray,
         )
     }
 }
 
 @Composable
-private fun AddCard(onClick: () -> Unit) {
+private fun AddTile(onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(if (focused) 1.12f else 1f, label = "addScale")
 
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.width(132.dp),
-    ) {
+    Column(horizontalAlignment = Alignment.Start) {
         Box(
             Modifier
-                .size(96.dp)
-                .graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
-                }
-                .clip(CircleShape)
-                .background(if (focused) GateLightFocused else GateLight)
+                .size(TileSlot)
                 .border(
-                    width = if (focused) Cine.FocusRingWidth else 0.dp,
-                    color = if (focused) GateInk else Color.Transparent,
-                    shape = CircleShape,
+                    width = 3.dp,
+                    color = if (focused) Color.White else Color.Transparent,
+                    shape = RectangleShape,
                 )
                 .onFocusChanged { focused = it.isFocused }
                 .clickable(onClick = onClick),
             contentAlignment = Alignment.Center,
         ) {
-            Text(
-                "+",
-                fontSize = 44.sp,
-                color = GateInk,
-                fontWeight = FontWeight.Light,
-            )
+            Box(
+                Modifier
+                    .size(TileSize)
+                    .clip(CircleShape)
+                    .background(Color.White),
+            ) {
+                Canvas(Modifier.fillMaxSize()) {
+                    val w = size.width
+                    val h = size.height
+                    val thickness = w * 0.05f
+                    val arm = w * 0.18f
+                    drawLine(
+                        Color.Black,
+                        Offset(w * 0.5f, h * 0.5f - arm),
+                        Offset(w * 0.5f, h * 0.5f + arm),
+                        strokeWidth = thickness,
+                        cap = StrokeCap.Round,
+                    )
+                    drawLine(
+                        Color.Black,
+                        Offset(w * 0.5f - arm, h * 0.5f),
+                        Offset(w * 0.5f + arm, h * 0.5f),
+                        strokeWidth = thickness,
+                        cap = StrokeCap.Round,
+                    )
+                }
+            }
         }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(10.dp))
 
         Text(
             "Adicionar perfil",
-            style = MaterialTheme.typography.bodyMedium,
-            color = if (focused) Cine.TextPrimary else Cine.TextSecondary,
+            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+            color = if (focused) Color.White else NetflixGray,
         )
     }
 }
@@ -289,21 +280,20 @@ private fun ManageButton(onClick: () -> Unit) {
 
     Box(
         Modifier
-            .clip(RoundedCornerShape(10.dp))
-            .background(if (focused) GateLightFocused else GateLight)
+            .background(if (focused) Color.White else Color.Transparent)
             .border(
-                width = if (focused) Cine.FocusRingWidth else 0.dp,
-                color = if (focused) GateInk else Color.Transparent,
-                shape = RoundedCornerShape(10.dp),
+                width = 1.dp,
+                color = if (focused) Color.White else NetflixGray,
+                shape = RectangleShape,
             )
             .onFocusChanged { focused = it.isFocused }
             .clickable(onClick = onClick)
-            .padding(horizontal = 30.dp, vertical = 13.dp),
+            .padding(horizontal = 26.dp, vertical = 12.dp),
     ) {
         Text(
             "GERENCIAR PERFIS",
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = 13.sp, letterSpacing = 1.6.sp),
-            color = GateInk,
+            style = MaterialTheme.typography.labelMedium.copy(fontSize = 13.sp, letterSpacing = 2.sp),
+            color = if (focused) Color.Black else NetflixGray,
         )
     }
 }
@@ -321,7 +311,7 @@ private fun ManageDialog(profiles: List<Profile>, onDismiss: () -> Unit, onRemov
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
-                        Text(profile.name, color = Cine.TextPrimary)
+                        Text(profile.name, color = Color.White)
                         TextButton(onClick = { onRemove(profile) }) { Text("Excluir") }
                     }
                 }
@@ -332,49 +322,9 @@ private fun ManageDialog(profiles: List<Profile>, onDismiss: () -> Unit, onRemov
 }
 
 @Composable
-private fun PinDialog(profile: Profile, onDismiss: () -> Unit, onCorrect: () -> Unit) {
-    var typed by remember { mutableStateOf("") }
-    val pin = profile.pin.orEmpty()
-
-    LaunchedEffect(typed) {
-        if (typed.length == pin.length) {
-            if (typed == pin) onCorrect() else typed = ""
-        }
-    }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("PIN de ${profile.name}") },
-        text = {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    "\u2022".repeat(typed.length).padEnd(pin.length, '\u00b7'),
-                    color = Cine.TextPrimary,
-                )
-                Spacer(Modifier.height(16.dp))
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("123", "456", "789", "0").forEach { row ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            row.forEach { digit ->
-                                TextButton(onClick = { typed += digit }) {
-                                    Text(digit.toString(), fontSize = 18.sp)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {},
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } },
-    )
-}
-
-@Composable
-private fun CreateDialog(onDismiss: () -> Unit, onCreate: (String, Boolean, String?) -> Unit) {
+private fun CreateDialog(onDismiss: () -> Unit, onCreate: (String, Boolean) -> Unit) {
     var name by remember { mutableStateOf("") }
     var kid by remember { mutableStateOf(false) }
-    var pin by remember { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -393,18 +343,11 @@ private fun CreateDialog(onDismiss: () -> Unit, onCreate: (String, Boolean, Stri
                     Spacer(Modifier.width(12.dp))
                     Text("Perfil infantil")
                 }
-                Spacer(Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = pin,
-                    onValueChange = { if (it.length <= 4) pin = it.filter(Char::isDigit) },
-                    label = { Text("PIN de 4 dígitos (opcional)") },
-                    singleLine = true,
-                )
             }
         },
         confirmButton = {
             TextButton(
-                onClick = { onCreate(name.trim(), kid, pin.ifEmpty { null }) },
+                onClick = { onCreate(name.trim(), kid) },
                 enabled = name.isNotBlank(),
             ) { Text("Criar") }
         },
