@@ -136,21 +136,23 @@ fun HomeScreen() {
     }
 
     Column(Modifier.fillMaxSize().background(HomeBackdrop)) {
-        CineHeader(
-            profile = active,
-            firstFocus = inicioFocus,
-            onNav = { lastAction = it },
-            onSearch = { lastAction = "Buscar" },
-            onProfile = { ProfileStore.setActive(null) },
-        )
-
         LazyColumn(
             modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(bottom = 60.dp),
         ) {
             item {
+                CineHeader(
+                    profile = active,
+                    firstFocus = inicioFocus,
+                    onNav = { lastAction = it },
+                    onSearch = { lastAction = "Buscar" },
+                    onProfile = { ProfileStore.setActive(null) },
+                )
+            }
+
+            item {
                 Column {
-                    Spacer(Modifier.height(18.dp))
+                    Spacer(Modifier.height(6.dp))
                     HeroCarousel(
                         heroes = heroes,
                         index = index,
