@@ -3,6 +3,7 @@ package com.cinegram.cine
 import com.tmplayer.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
@@ -22,7 +23,53 @@ object Tmdb {
         val backdrop: String?,
     )
 
-    data class Card(val id: Int, val title: String, val poster: String?)
+    data class Card(
+        val id: Int,
+        val title: String,
+        val poster: String?,
+        val backdrop: String? = null,
+        val overview: String = "",
+        val year: String? = null,
+        val genres: String = "",
+        val isSeries: Boolean = true,
+    ) {
+        val meta: String
+            get() = listOfNotNull(
+                if (isSeries) "Série" else "Filme",
+                year,
+                genres.ifBlank { null },
+            ).joinToString(" • ")
+    }
+
+    private val GENRES = mapOf(
+        28 to "Ação",
+        12 to "Aventura",
+        16 to "Animação",
+        35 to "Comédia",
+        80 to "Crime",
+        99 to "Documentário",
+        18 to "Drama",
+        10751 to "Família",
+        14 to "Fantasia",
+        36 to "História",
+        27 to "Terror",
+        10402 to "Música",
+        9648 to "Mistério",
+        10749 to "Romance",
+        878 to "Ficção científica",
+        10770 to "Filme de TV",
+        53 to "Suspense",
+        10752 to "Guerra",
+        37 to "Faroeste",
+        10759 to "Ação e aventura",
+        10762 to "Infantil",
+        10763 to "Notícias",
+        10764 to "Reality",
+        10765 to "Sci-fi e fantasia",
+        10766 to "Novela",
+        10767 to "Talk show",
+        10768 to "Guerra e política",
+    )
 
     private suspend fun get(path: String): String? = withContext(Dispatchers.IO) {
         val key = BuildConfig.TMDB_API_KEY
@@ -79,6 +126,18 @@ object Tmdb {
         }.getOrDefault(emptyList())
     }
 
+    private fun yearOf(o: JSONObject): String? {
+        val raw = o.optString("first_air_date").ifEmpty { o.optString("release_date") }
+        return raw.take(4).takeIf { it.length == 4 }
+    }
+
+    private fun genreNames(ids: JSONArray?): String {
+        if (ids == null) return ""
+        return (0 until minOf(ids.length(), 2))
+            .mapNotNull { GENRES[ids.optInt(it)] }
+            .joinToString(" • ")
+    }
+
     private suspend fun cards(path: String): List<Card> {
         val body = get(path) ?: return emptyList()
         return runCatching {
@@ -86,9 +145,19 @@ object Tmdb {
             (0 until results.length()).mapNotNull { i ->
                 val o = results.optJSONObject(i) ?: return@mapNotNull null
                 val poster = o.optString("poster_path")
+                val backdrop = o.optString("backdrop_path")
                 val title = o.optString("name").ifEmpty { o.optString("title") }
                 if (poster.isEmpty() || title.isEmpty()) return@mapNotNull null
-                Card(id = o.optInt("id"), title = title, poster = "$IMAGE/w342$poster")
+                Card(
+                    id = o.optInt("id"),
+                    title = title,
+                    poster = "$IMAGE/w342$poster",
+                    backdrop = if (backdrop.isEmpty()) null else "$IMAGE/w780$backdrop",
+                    overview = o.optString("overview"),
+                    year = yearOf(o),
+                    genres = genreNames(o.optJSONArray("genre_ids")),
+                    isSeries = path.contains("/tv/"),
+                )
             }
         }.getOrDefault(emptyList())
     }
