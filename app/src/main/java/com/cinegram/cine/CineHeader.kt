@@ -79,7 +79,7 @@ fun CineHeader(
     Box(
         Modifier
             .fillMaxWidth()
-            .padding(start = Cine.ScreenMargin, end = Cine.ScreenMargin, top = 18.dp, bottom = 12.dp),
+            .padding(start = Cine.ScreenMargin, end = Cine.ScreenMargin, top = 14.dp, bottom = 10.dp),
     ) {
         Box(Modifier.align(Alignment.CenterStart)) {
             ProfileSwitch(
@@ -90,7 +90,7 @@ fun CineHeader(
             if (switching) {
                 Popup(
                     alignment = Alignment.TopStart,
-                    offset = IntOffset(0, with(LocalDensity.current) { 50.dp.roundToPx() }),
+                    offset = IntOffset(0, with(LocalDensity.current) { 42.dp.roundToPx() }),
                     onDismissRequest = { switching = false },
                     properties = PopupProperties(focusable = true),
                 ) {
@@ -153,20 +153,20 @@ private fun ProfileSwitch(profile: Profile?, onOpen: () -> Unit) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
-            .clip(RoundedCornerShape(10.dp))
+            .clip(RoundedCornerShape(8.dp))
             .border(
                 width = if (focused) 2.dp else 0.dp,
                 color = if (focused) Cine.TextPrimary else Color.Transparent,
-                shape = RoundedCornerShape(10.dp),
+                shape = RoundedCornerShape(8.dp),
             )
             .onFocusChanged { focused = it.isFocused }
             .clickable(onClick = onOpen)
             .padding(4.dp),
     ) {
-        ProfileFace(avatar = profile?.avatar ?: 0, size = 38.dp, corner = 8.dp)
-        Spacer(Modifier.width(8.dp))
+        ProfileFace(avatar = profile?.avatar ?: 0, size = 30.dp, corner = 4.dp)
+        Spacer(Modifier.width(7.dp))
         ArrowGlyph()
-        Spacer(Modifier.width(4.dp))
+        Spacer(Modifier.width(3.dp))
     }
 }
 
@@ -190,7 +190,7 @@ private fun MenuRow(
             .padding(horizontal = 12.dp, vertical = 9.dp),
     ) {
         if (profile != null) {
-            ProfileFace(avatar = profile.avatar, size = 26.dp, corner = 5.dp)
+            ProfileFace(avatar = profile.avatar, size = 24.dp, corner = 4.dp)
             Spacer(Modifier.width(10.dp))
         }
         Text(
@@ -203,7 +203,7 @@ private fun MenuRow(
 
 @Composable
 private fun Brand(modifier: Modifier = Modifier) {
-    Box(modifier.size(172.dp, 43.dp)) {
+    Box(modifier.size(184.dp, 46.dp)) {
         Image(
             painter = painterResource(R.drawable.cinegram_logo),
             contentDescription = "CineGram",
