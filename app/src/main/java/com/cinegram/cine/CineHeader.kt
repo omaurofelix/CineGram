@@ -203,7 +203,7 @@ private fun MenuRow(
 
 @Composable
 private fun Brand(modifier: Modifier = Modifier) {
-    Box(modifier.size(160.dp, 40.dp)) {
+    Box(modifier.size(172.dp, 43.dp)) {
         Image(
             painter = painterResource(R.drawable.cinegram_logo),
             contentDescription = "CineGram",
