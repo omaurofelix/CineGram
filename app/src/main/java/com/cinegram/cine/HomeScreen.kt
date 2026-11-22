@@ -52,6 +52,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.cinegram.cine.profiles.Favorite
+import com.cinegram.cine.profiles.FavoritesStore
 import com.cinegram.cine.profiles.ProfileStore
 import com.cinegram.design.Cine
 import kotlinx.coroutines.delay
@@ -84,6 +86,17 @@ private fun tabOf(label: String): Tab = when (label) {
     else -> Tab.Inicio
 }
 
+private fun favCard(fav: Favorite): Tmdb.Card = Tmdb.Card(
+    id = fav.id,
+    title = fav.title,
+    poster = fav.poster,
+    backdrop = fav.backdrop,
+    overview = fav.overview,
+    year = fav.year,
+    genres = fav.genres,
+    isSeries = fav.media == "tv",
+)
+
 private data class FakeItem(val title: String, val tone: Color, val progress: Float)
 
 private val FakeRow = listOf(
@@ -109,11 +122,20 @@ fun HomeScreen() {
     var stills by remember { mutableStateOf<List<String?>>(emptyList()) }
     var index by remember { mutableStateOf(0) }
     var lastAction by remember { mutableStateOf("-") }
+    var detail by remember { mutableStateOf<Tmdb.Card?>(null) }
+    var detailMedia by remember { mutableStateOf("tv") }
     val logos = remember { mutableStateMapOf<String, String?>() }
 
     val profiles by ProfileStore.profiles.collectAsState()
     val activeId by ProfileStore.activeId.collectAsState()
     val active = profiles.firstOrNull { it.id == activeId }
+    val favorites by FavoritesStore.items.collectAsState()
+    val myList = favorites.filter { it.owner == activeId }
+
+    val openDetail: (Tmdb.Card) -> Unit = { card ->
+        detail = card
+        detailMedia = if (card.isSeries) "tv" else "movie"
+    }
 
     LaunchedEffect(tab) {
         scope.launch { listState.scrollToItem(0) }
@@ -203,47 +225,65 @@ fun HomeScreen() {
                 }
             }
 
-            when (tab) {
-                Tab.MinhaLista -> item {
+            if (tab == Tab.MinhaLista) {
+                item {
                     Column {
                         Spacer(Modifier.height(24.dp))
                         RowTitle("Minha Lista")
                         Spacer(Modifier.height(10.dp))
-                        Placeholder("Os favoritos do perfil vão aparecer aqui.")
+                        if (myList.isEmpty()) {
+                            Placeholder("Nada na lista ainda. Abra um título e toque em Minha Lista.")
+                        } else {
+                            RowSlot(PosterRowHeight) {
+                                LazyRow(
+                                    horizontalArrangement = Arrangement.spacedBy(Cine.RowGap),
+                                    contentPadding = PaddingValues(horizontal = Cine.ScreenMargin),
+                                ) {
+                                    itemsIndexed(
+                                        myList,
+                                        key = { _, fav -> "${fav.media}-${fav.id}" },
+                                    ) { i, fav ->
+                                        PosterCard(
+                                            card = favCard(fav),
+                                            focusRequester = if (i == 0) firstRowFocus else null,
+                                            onClick = { openDetail(favCard(fav)) },
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                item {
+                    Column {
+                        Spacer(Modifier.height(24.dp))
+                        RowTitle("Em alta agora")
+                        Spacer(Modifier.height(10.dp))
+                        RowSlot(PosterRowHeight) {
+                            PosterRow(trendingCards, firstRowFocus, openDetail)
+                        }
                     }
                 }
 
-                else -> {
-                    item {
-                        Column {
-                            Spacer(Modifier.height(24.dp))
-                            RowTitle("Em alta agora")
-                            Spacer(Modifier.height(10.dp))
-                            RowSlot(PosterRowHeight) {
-                                PosterRow(trendingCards, firstRowFocus) { lastAction = it.title }
-                            }
+                item {
+                    Column {
+                        Spacer(Modifier.height(22.dp))
+                        RowTitle("Populares")
+                        Spacer(Modifier.height(10.dp))
+                        RowSlot(PosterRowHeight) {
+                            PosterRow(popularCards, null, openDetail)
                         }
                     }
+                }
 
-                    item {
-                        Column {
-                            Spacer(Modifier.height(22.dp))
-                            RowTitle("Populares")
-                            Spacer(Modifier.height(10.dp))
-                            RowSlot(PosterRowHeight) {
-                                PosterRow(popularCards) { lastAction = it.title }
-                            }
-                        }
-                    }
-
-                    item {
-                        Column {
-                            Spacer(Modifier.height(22.dp))
-                            RowTitle("Mais bem avaliadas")
-                            Spacer(Modifier.height(10.dp))
-                            RowSlot(PosterRowHeight) {
-                                PosterRow(topCards) { lastAction = it.title }
-                            }
+                item {
+                    Column {
+                        Spacer(Modifier.height(22.dp))
+                        RowTitle("Mais bem avaliadas")
+                        Spacer(Modifier.height(10.dp))
+                        RowSlot(PosterRowHeight) {
+                            PosterRow(topCards, null, openDetail)
                         }
                     }
                 }
@@ -257,6 +297,15 @@ fun HomeScreen() {
             onSearch = { lastAction = "Buscar" },
             onProfile = { ProfileStore.setActive(null) },
         )
+
+        detail?.let { card ->
+            DetailScreen(
+                card = card,
+                media = detailMedia,
+                owner = activeId,
+                onBack = { detail = null },
+            )
+        }
     }
 
     LaunchedEffect(Unit) { runCatching { inicioFocus.requestFocus() } }
@@ -430,7 +479,7 @@ private fun HeroCarousel(
 @Composable
 private fun PosterRow(
     cards: List<Tmdb.Card>,
-    firstFocus: FocusRequester? = null,
+    firstFocus: FocusRequester?,
     onClick: (Tmdb.Card) -> Unit,
 ) {
     LazyRow(
