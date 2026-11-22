@@ -64,7 +64,7 @@ private val AvatarFaces = listOf(
     Color(0xFFA06BF5) to Color(0xFF4A1EA8),
 )
 
-private val GateBackground = Color(0xFF1E1E1E)
+private val GateBackground = Color(0xFF141414)
 private val NetflixGray = Color(0xFFB3B3B3)
 private val AddCircleGray = Color(0xFF3A3A3A)
 private val AddCrossGray = Color(0xFFB8B8B8)
