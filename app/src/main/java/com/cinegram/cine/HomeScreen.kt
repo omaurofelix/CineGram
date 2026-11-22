@@ -20,9 +20,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -33,6 +34,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,6 +63,7 @@ import coil3.compose.AsyncImage
 import com.cinegram.cine.profiles.ProfileStore
 import com.cinegram.design.Cine
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private val HomeBackdrop = Brush.verticalGradient(
     colorStops = arrayOf(
@@ -74,8 +77,10 @@ private const val MAX_HEROES = 6
 
 private val EpisodeRowHeight = 138.dp
 private val ExpandRowHeight = 340.dp
-private val CardWidth = 196.dp
+private val CardWidth = 150.dp
+private val PosterHeight = 225.dp
 private val ExpandedCardWidth = 440.dp
+private val ExpandedHeight = 248.dp
 
 private data class FakeItem(val title: String, val tone: Color, val progress: Float)
 
@@ -413,30 +418,49 @@ private fun PlayGlyph(tint: Color) {
 
 @Composable
 private fun ExpandRow(cards: List<Tmdb.Card>, onClick: (Tmdb.Card) -> Unit) {
+    val listState = rememberLazyListState()
+
     LazyRow(
+        state = listState,
         horizontalArrangement = Arrangement.spacedBy(Cine.RowGap),
         contentPadding = PaddingValues(horizontal = Cine.ScreenMargin),
     ) {
-        items(cards) { card ->
-            ExpandCard(card = card, onClick = { onClick(card) })
+        itemsIndexed(cards) { index, card ->
+            ExpandCard(
+                card = card,
+                index = index,
+                listState = listState,
+                onClick = { onClick(card) },
+            )
         }
     }
 }
 
 @Composable
-private fun ExpandCard(card: Tmdb.Card, onClick: () -> Unit) {
+private fun ExpandCard(
+    card: Tmdb.Card,
+    index: Int,
+    listState: LazyListState,
+    onClick: () -> Unit,
+) {
     var focused by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     val width by animateDpAsState(
         targetValue = if (focused) ExpandedCardWidth else CardWidth,
         animationSpec = tween(200),
         label = "cardWidth",
+    )
+    val height by animateDpAsState(
+        targetValue = if (focused) ExpandedHeight else PosterHeight,
+        animationSpec = tween(200),
+        label = "cardHeight",
     )
 
     Column(Modifier.width(width)) {
         Box(
             Modifier
                 .fillMaxWidth()
-                .aspectRatio(16f / 9f)
+                .height(height)
                 .clip(RoundedCornerShape(6.dp))
                 .background(Cine.Surface)
                 .border(
@@ -444,10 +468,15 @@ private fun ExpandCard(card: Tmdb.Card, onClick: () -> Unit) {
                     color = if (focused) Cine.TextPrimary else Color.Transparent,
                     shape = RoundedCornerShape(6.dp),
                 )
-                .onFocusChanged { focused = it.isFocused }
+                .onFocusChanged {
+                    focused = it.isFocused
+                    if (it.isFocused) {
+                        scope.launch { listState.animateScrollToItem(index) }
+                    }
+                }
                 .clickable(onClick = onClick),
         ) {
-            val art = card.backdrop ?: card.poster
+            val art = if (focused) card.backdrop ?: card.poster else card.poster ?: card.backdrop
             if (art != null) {
                 AsyncImage(
                     model = art,
@@ -457,27 +486,27 @@ private fun ExpandCard(card: Tmdb.Card, onClick: () -> Unit) {
                 )
             }
 
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(46.dp)
-                    .align(Alignment.BottomStart)
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(Color(0x00000000), Color(0xCC000000)),
+            if (focused) {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(52.dp)
+                        .align(Alignment.BottomStart)
+                        .background(
+                            Brush.verticalGradient(listOf(Color(0x00000000), Color(0xD9000000))),
                         ),
-                    ),
-            )
+                )
 
-            Text(
-                card.title,
-                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.sp),
-                color = Cine.TextPrimary,
-                maxLines = 1,
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
-            )
+                Text(
+                    card.title,
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.sp),
+                    color = Cine.TextPrimary,
+                    maxLines = 1,
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                )
+            }
         }
 
         if (focused) {
