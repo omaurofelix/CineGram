@@ -90,6 +90,26 @@ object Tmdb {
     }
 
     /**
+     * Arte oficial do titulo, aquela com a tipografia própria de cada obra.
+     * Prefere portugues, depois ingles, depois qualquer idioma.
+     */
+    suspend fun logo(tvId: Int): String? {
+        val body = get("/tv/$tvId/images?include_image_language=pt,en,null") ?: return null
+        return runCatching {
+            val logos = JSONObject(body).optJSONArray("logos") ?: return@runCatching null
+            val found = (0 until logos.length()).mapNotNull { i ->
+                val o = logos.optJSONObject(i) ?: return@mapNotNull null
+                val path = o.optString("file_path")
+                if (path.isEmpty()) null else o.optString("iso_639_1") to path
+            }
+            val chosen = found.firstOrNull { it.first == "pt" }?.second
+                ?: found.firstOrNull { it.first == "en" }?.second
+                ?: found.firstOrNull()?.second
+            chosen?.let { "$IMAGE/w500$it" }
+        }.getOrNull()
+    }
+
+    /**
      * Stills por episódio. A lista mantém o tamanho da temporada e usa null
      * no episódio sem imagem, para o índice continuar casando com o episódio.
      */
