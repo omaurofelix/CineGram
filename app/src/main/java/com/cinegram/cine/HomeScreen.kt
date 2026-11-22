@@ -1,5 +1,7 @@
 package com.cinegram.cine
 
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -70,8 +72,10 @@ private val HomeBackdrop = Brush.verticalGradient(
 private const val SHOW_ID = 133808
 private const val MAX_HEROES = 6
 
-private val PosterRowHeight = 258.dp
 private val EpisodeRowHeight = 138.dp
+private val ExpandRowHeight = 340.dp
+private val CardWidth = 196.dp
+private val ExpandedCardWidth = 440.dp
 
 private data class FakeItem(val title: String, val tone: Color, val progress: Float)
 
@@ -105,7 +109,16 @@ fun HomeScreen() {
         stills = Tmdb.stills(SHOW_ID, 1)
         popularCards = Tmdb.popular()
         topCards = Tmdb.topRated()
-        trendingCards = heroes.map { Tmdb.Card(it.id, it.title, null) }
+        trendingCards = heroes.map {
+            Tmdb.Card(
+                id = it.id,
+                title = it.title,
+                poster = null,
+                backdrop = it.backdrop,
+                overview = it.overview,
+                isSeries = true,
+            )
+        }
     }
 
     LaunchedEffect(heroes.size) {
@@ -176,8 +189,8 @@ fun HomeScreen() {
                 Column {
                     Spacer(Modifier.height(26.dp))
                     RowTitle("Em alta agora")
-                    RowSlot(PosterRowHeight) {
-                        PosterRow(trendingCards) { lastAction = it.title }
+                    RowSlot(ExpandRowHeight, Alignment.TopStart) {
+                        ExpandRow(trendingCards) { lastAction = it.title }
                     }
                 }
             }
@@ -186,8 +199,8 @@ fun HomeScreen() {
                 Column {
                     Spacer(Modifier.height(26.dp))
                     RowTitle("Populares")
-                    RowSlot(PosterRowHeight) {
-                        PosterRow(popularCards) { lastAction = it.title }
+                    RowSlot(ExpandRowHeight, Alignment.TopStart) {
+                        ExpandRow(popularCards) { lastAction = it.title }
                     }
                 }
             }
@@ -196,8 +209,8 @@ fun HomeScreen() {
                 Column {
                     Spacer(Modifier.height(26.dp))
                     RowTitle("Mais bem avaliadas")
-                    RowSlot(PosterRowHeight) {
-                        PosterRow(topCards) { lastAction = it.title }
+                    RowSlot(ExpandRowHeight, Alignment.TopStart) {
+                        ExpandRow(topCards) { lastAction = it.title }
                     }
                 }
             }
@@ -218,10 +231,14 @@ private fun RowTitle(text: String) {
 }
 
 @Composable
-private fun RowSlot(height: Dp, content: @Composable () -> Unit) {
+private fun RowSlot(
+    height: Dp,
+    alignment: Alignment = Alignment.CenterStart,
+    content: @Composable () -> Unit,
+) {
     Box(
         Modifier.fillMaxWidth().height(height),
-        contentAlignment = Alignment.CenterStart,
+        contentAlignment = alignment,
     ) {
         content()
     }
@@ -308,9 +325,9 @@ private fun HeroCarousel(
 
             Text(
                 hero?.title ?: "Carregando",
-                style = MaterialTheme.typography.displaySmall.copy(fontSize = 40.sp),
+                style = MaterialTheme.typography.displaySmall.copy(fontSize = 34.sp),
                 color = Cine.TextPrimary,
-                maxLines = 1,
+                maxLines = 2,
             )
 
             Spacer(Modifier.height(8.dp))
@@ -395,42 +412,89 @@ private fun PlayGlyph(tint: Color) {
 }
 
 @Composable
-private fun PosterRow(cards: List<Tmdb.Card>, onClick: (Tmdb.Card) -> Unit) {
+private fun ExpandRow(cards: List<Tmdb.Card>, onClick: (Tmdb.Card) -> Unit) {
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(Cine.RowGap),
         contentPadding = PaddingValues(horizontal = Cine.ScreenMargin),
     ) {
         items(cards) { card ->
-            PosterCard(card = card, onClick = { onClick(card) })
+            ExpandCard(card = card, onClick = { onClick(card) })
         }
     }
 }
 
 @Composable
-private fun PosterCard(card: Tmdb.Card, onClick: () -> Unit) {
+private fun ExpandCard(card: Tmdb.Card, onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
+    val width by animateDpAsState(
+        targetValue = if (focused) ExpandedCardWidth else CardWidth,
+        animationSpec = tween(200),
+        label = "cardWidth",
+    )
 
-    Box(
-        Modifier
-            .width(150.dp)
-            .aspectRatio(2f / 3f)
-            .clip(RoundedCornerShape(10.dp))
-            .background(Cine.Surface)
-            .border(
-                width = if (focused) 3.dp else 0.dp,
-                color = if (focused) Cine.TextPrimary else Color.Transparent,
-                shape = RoundedCornerShape(10.dp),
+    Column(Modifier.width(width)) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .aspectRatio(16f / 9f)
+                .clip(RoundedCornerShape(6.dp))
+                .background(Cine.Surface)
+                .border(
+                    width = if (focused) 3.dp else 0.dp,
+                    color = if (focused) Cine.TextPrimary else Color.Transparent,
+                    shape = RoundedCornerShape(6.dp),
+                )
+                .onFocusChanged { focused = it.isFocused }
+                .clickable(onClick = onClick),
+        ) {
+            val art = card.backdrop ?: card.poster
+            if (art != null) {
+                AsyncImage(
+                    model = art,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(46.dp)
+                    .align(Alignment.BottomStart)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(Color(0x00000000), Color(0xCC000000)),
+                        ),
+                    ),
             )
-            .onFocusChanged { focused = it.isFocused }
-            .clickable(onClick = onClick),
-    ) {
-        if (card.poster != null) {
-            AsyncImage(
-                model = card.poster,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
+
+            Text(
+                card.title,
+                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.sp),
+                color = Cine.TextPrimary,
+                maxLines = 1,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
             )
+        }
+
+        if (focused) {
+            Column(Modifier.padding(top = 10.dp, end = 8.dp)) {
+                Text(
+                    card.meta,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Cine.TextSecondary,
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    card.overview.ifBlank { "Sem sinopse em portugues para este titulo." },
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.sp),
+                    color = Cine.TextPrimary,
+                    maxLines = 3,
+                )
+            }
         }
     }
 }
