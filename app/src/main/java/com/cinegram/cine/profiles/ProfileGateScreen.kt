@@ -71,6 +71,7 @@ private val AddCrossGray = Color(0xFFB8B8B8)
 private val TileSize = 118.dp
 private val TileSlot = 126.dp
 private val AddCircleSize = 80.dp
+private val LogoHeight = 130.dp
 
 @Composable
 fun ProfileGateScreen() {
@@ -90,7 +91,7 @@ fun ProfileGateScreen() {
             verticalArrangement = Arrangement.Center,
         ) {
             Box(
-                Modifier.fillMaxWidth().height(96.dp),
+                Modifier.fillMaxWidth().height(LogoHeight),
                 contentAlignment = Alignment.Center,
             ) {
                 Image(
@@ -101,7 +102,7 @@ fun ProfileGateScreen() {
                 )
             }
 
-            Spacer(Modifier.height(28.dp))
+            Spacer(Modifier.height(26.dp))
 
             Text(
                 "Quem está assistindo?",
@@ -126,7 +127,7 @@ fun ProfileGateScreen() {
                 }
             }
 
-            Spacer(Modifier.height(44.dp))
+            Spacer(Modifier.height(40.dp))
 
             ManageButton(onClick = { managing = true })
         }
