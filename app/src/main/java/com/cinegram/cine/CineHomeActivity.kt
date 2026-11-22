@@ -9,6 +9,7 @@ import coil3.ImageLoader
 import coil3.SingletonImageLoader
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.crossfade
+import com.cinegram.cine.profiles.FavoritesStore
 import com.cinegram.cine.profiles.ProfileGateScreen
 import com.cinegram.cine.profiles.ProfileStore
 import com.cinegram.design.CineTheme
@@ -19,6 +20,7 @@ class CineHomeActivity : ComponentActivity() {
 
         ProfileStore.init(applicationContext)
         ProfileStore.setActive(null)
+        FavoritesStore.init(applicationContext)
 
         SingletonImageLoader.setSafe { context ->
             ImageLoader.Builder(context)
