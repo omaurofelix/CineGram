@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize 
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -55,7 +55,7 @@ import com.tmplayer.R
 private val NavItems = listOf("Início", "Séries", "Filmes", "Minha Lista")
 
 private val PillShape = RoundedCornerShape(50)
-private val PillBg = Color(0xFFF5F5F7)
+private val PillFocus = Color(0x33FFFFFF)
 private val ArrowGray = Color(0xFFB3B3B3)
 private val MenuBg = Color(0xFF232326)
 
@@ -79,7 +79,7 @@ fun CineHeader(
     Box(
         Modifier
             .fillMaxWidth()
-            .padding(start = Cine.ScreenMargin, end = Cine.ScreenMargin, top = 20.dp, bottom = 14.dp),
+            .padding(start = Cine.ScreenMargin, end = Cine.ScreenMargin, top = 18.dp, bottom = 12.dp),
     ) {
         Box(Modifier.align(Alignment.CenterStart)) {
             ProfileSwitch(
@@ -183,7 +183,7 @@ private fun MenuRow(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .clip(RoundedCornerShape(6.dp))
-            .background(if (focused) PillBg else Color.Transparent)
+            .background(if (focused) PillFocus else Color.Transparent)
             .then(if (firstFocus != null) Modifier.focusRequester(firstFocus) else Modifier)
             .onFocusChanged { focused = it.isFocused }
             .clickable(onClick = onClick)
@@ -195,7 +195,7 @@ private fun MenuRow(
         }
         Text(
             profile?.name ?: label.orEmpty(),
-            color = if (focused) Color.Black else Cine.TextPrimary,
+            color = Cine.TextPrimary,
             fontSize = 13.sp,
         )
     }
@@ -203,7 +203,7 @@ private fun MenuRow(
 
 @Composable
 private fun Brand(modifier: Modifier = Modifier) {
-    Box(modifier.size(120.dp, 30.dp)) {
+    Box(modifier.size(160.dp, 40.dp)) {
         Image(
             painter = painterResource(R.drawable.cinegram_logo),
             contentDescription = "CineGram",
@@ -220,7 +220,7 @@ private fun NavItem(label: String, firstFocus: FocusRequester?, onClick: () -> U
     Box(
         Modifier
             .clip(PillShape)
-            .background(if (focused) PillBg else Color.Transparent)
+            .background(if (focused) PillFocus else Color.Transparent)
             .then(if (firstFocus != null) Modifier.focusRequester(firstFocus) else Modifier)
             .onFocusChanged { focused = it.isFocused }
             .clickable(onClick = onClick)
@@ -228,7 +228,7 @@ private fun NavItem(label: String, firstFocus: FocusRequester?, onClick: () -> U
     ) {
         Text(
             label,
-            color = if (focused) Color.Black else Cine.TextSecondary,
+            color = if (focused) Cine.TextPrimary else Cine.TextSecondary,
             fontSize = 14.sp,
             fontWeight = if (focused) FontWeight.Medium else FontWeight.Normal,
         )
@@ -245,28 +245,32 @@ private fun RoundButton(onClick: () -> Unit, content: @Composable (Color) -> Uni
             .size(38.dp)
             .scale(scale)
             .clip(PillShape)
-            .background(if (focused) PillBg else Color.Transparent)
+            .background(if (focused) PillFocus else Color.Transparent)
             .onFocusChanged { focused = it.isFocused }
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        content(if (focused) Color.Black else Cine.TextSecondary)
+        content(if (focused) Cine.TextPrimary else Cine.TextSecondary)
     }
 }
 
 @Composable
 private fun SearchGlyph(tint: Color) {
-    Canvas(Modifier.size(14.dp)) {
-        val stroke = 1.6.dp.toPx()
+    Canvas(Modifier.size(16.dp)) {
+        val stroke = 1.5.dp.toPx()
+        val radius = size.minDimension * 0.30f
+        val center = Offset(size.width * 0.40f, size.height * 0.40f)
+
         drawCircle(
             color = tint,
-            radius = size.minDimension / 2.6f,
+            radius = radius,
+            center = center,
             style = Stroke(width = stroke),
         )
         drawLine(
             color = tint,
-            start = Offset(size.width * 0.66f, size.height * 0.66f),
-            end = Offset(size.width, size.height),
+            start = Offset(center.x + radius * 0.70f, center.y + radius * 0.70f),
+            end = Offset(size.width * 0.95f, size.height * 0.95f),
             strokeWidth = stroke,
             cap = StrokeCap.Round,
         )
