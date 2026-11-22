@@ -392,7 +392,7 @@ private fun HeroCarousel(
 @Composable
 private fun ExpandRow(
     cards: List<Tmdb.Card>,
-    logos: Map<Int, String?>,
+    logos: MutableMap<Int, String?>,
     onClick: (Tmdb.Card) -> Unit,
 ) {
     val listState = rememberLazyListState()
@@ -419,7 +419,7 @@ private fun ExpandCard(
     card: Tmdb.Card,
     index: Int,
     listState: LazyListState,
-    logos: Map<Int, String?>,
+    logos: MutableMap<Int, String?>,
     onClick: () -> Unit,
 ) {
     var focused by remember { mutableStateOf(false) }
