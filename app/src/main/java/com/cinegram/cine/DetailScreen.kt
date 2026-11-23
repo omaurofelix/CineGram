@@ -17,9 +17,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -52,121 +53,213 @@ import com.cinegram.design.Cine
 import kotlinx.coroutines.launch
 
 @Composable
-fun DetailScreen(card: Tmdb.Card, media: String, owner: String?, onBack: () -> Unit) {
+fun DetailScreen(card: Tmdb.Card, owner: String?, onBack: () -> Unit) {
     val favorites by FavoritesStore.items.collectAsState()
-    val inList = favorites.any { it.owner == owner && it.media == media && it.id == card.id }
+    val inList = favorites.any { it.owner == owner && it.media == card.media && it.id == card.id }
     val scope = rememberCoroutineScope()
     val firstButton = remember { FocusRequester() }
     var logo by remember { mutableStateOf<String?>(null) }
+    var details by remember { mutableStateOf<Tmdb.Details?>(null) }
+    var season by remember { mutableStateOf(1) }
+    var episodes by remember { mutableStateOf<List<Tmdb.Episode>>(emptyList()) }
 
-    LaunchedEffect(media, card.id) {
-        logo = Tmdb.logo(media, card.id)
+    LaunchedEffect(card.media, card.id) {
+        logo = Tmdb.logo(card.media, card.id)
+        details = Tmdb.details(card.media, card.id)
+    }
+
+    LaunchedEffect(card.media, card.id, season) {
+        episodes = if (card.isSeries) Tmdb.season(card.id, season) else emptyList()
     }
 
     BackHandler { onBack() }
 
     Box(Modifier.fillMaxSize().background(Cine.Bg)) {
-        Column(
-            Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
+        LazyColumn(
+            Modifier.fillMaxSize(),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 40.dp),
         ) {
-            Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f)) {
-                val art = card.backdrop ?: card.poster
-                if (art != null) {
-                    AsyncImage(
-                        model = art,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
-                Box(
-                    Modifier.fillMaxSize().background(
-                        Brush.verticalGradient(
-                            colorStops = arrayOf(
-                                0f to Color(0x00000000),
-                                0.55f to Color(0xCC0B0B0D),
-                                1f to Cine.Bg,
+            item {
+                Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f)) {
+                    val art = card.backdrop ?: card.poster
+                    if (art != null) {
+                        AsyncImage(
+                            model = art,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
+                    Box(
+                        Modifier.fillMaxSize().background(
+                            Brush.verticalGradient(
+                                colorStops = arrayOf(
+                                    0f to Color(0x00000000),
+                                    0.6f to Color(0xCC0A0A0A),
+                                    1f to Cine.Bg,
+                                ),
                             ),
                         ),
-                    ),
-                )
+                    )
+                }
             }
 
-            Column(Modifier.padding(horizontal = Cine.ScreenMargin, vertical = 18.dp)) {
-                if (logo != null) {
-                    AsyncImage(
-                        model = logo,
-                        contentDescription = card.title,
-                        contentScale = ContentScale.Fit,
-                        alignment = Alignment.CenterStart,
-                        modifier = Modifier.height(70.dp).fillMaxWidth(),
-                    )
-                } else {
+            item {
+                Column(Modifier.padding(horizontal = Cine.ScreenMargin)) {
+                    if (logo != null) {
+                        AsyncImage(
+                            model = logo,
+                            contentDescription = card.title,
+                            contentScale = ContentScale.Fit,
+                            alignment = Alignment.CenterStart,
+                            modifier = Modifier.height(70.dp).fillMaxWidth(),
+                        )
+                    } else {
+                        Text(
+                            card.title,
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = Cine.TextPrimary,
+                        )
+                    }
+
+                    Spacer(Modifier.height(12.dp))
+
                     Text(
-                        card.title,
-                        style = MaterialTheme.typography.headlineMedium,
+                        detailMeta(card, details),
+                        style = MaterialTheme.typography.labelMedium.copy(fontSize = 13.sp),
                         color = Cine.TextPrimary,
+                        fontWeight = FontWeight.Bold,
+                    )
+
+                    Spacer(Modifier.height(14.dp))
+
+                    Text(
+                        card.overview.ifBlank { "Sem sinopse em portugues para este titulo." },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Cine.TextSecondary,
+                    )
+
+                    Spacer(Modifier.height(22.dp))
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        ActionButton(
+                            label = "Assistir",
+                            primary = true,
+                            firstFocus = firstButton,
+                        ) {}
+
+                        ActionButton(
+                            label = if (inList) "Na lista" else "Minha Lista",
+                            primary = false,
+                            checked = inList,
+                            firstFocus = null,
+                        ) {
+                            scope.launch {
+                                FavoritesStore.toggle(
+                                    owner,
+                                    Favorite(
+                                        media = card.media,
+                                        id = card.id,
+                                        title = card.title,
+                                        poster = card.poster,
+                                        backdrop = card.backdrop,
+                                        overview = card.overview,
+                                        year = card.year,
+                                        genres = card.genres,
+                                    ),
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(28.dp))
+                }
+            }
+
+            if (card.isSeries && episodes.isNotEmpty()) {
+                item {
+                    Text(
+                        "Temporada $season",
+                        style = MaterialTheme.typography.headlineSmall.copy(fontSize = 17.sp),
+                        color = Cine.TextPrimary,
+                        modifier = Modifier.padding(horizontal = Cine.ScreenMargin),
                     )
                 }
 
-                Spacer(Modifier.height(12.dp))
-
-                Text(
-                    card.meta,
-                    style = MaterialTheme.typography.labelMedium.copy(fontSize = 13.sp),
-                    color = Cine.TextPrimary,
-                    fontWeight = FontWeight.Bold,
-                )
-
-                Spacer(Modifier.height(14.dp))
-
-                Text(
-                    card.overview.ifBlank { "Sem sinopse em portugues para este titulo." },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Cine.TextSecondary,
-                )
-
-                Spacer(Modifier.height(24.dp))
-
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ActionButton(
-                        label = "Assistir",
-                        primary = true,
-                        firstFocus = firstButton,
-                    ) {}
-
-                    ActionButton(
-                        label = if (inList) "Na lista" else "Minha Lista",
-                        primary = false,
-                        checked = inList,
-                        firstFocus = null,
+                item {
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(Cine.RowGap),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = Cine.ScreenMargin),
+                        modifier = Modifier.padding(top = 12.dp),
                     ) {
-                        scope.launch {
-                            FavoritesStore.toggle(
-                                owner,
-                                Favorite(
-                                    media = media,
-                                    id = card.id,
-                                    title = card.title,
-                                    poster = card.poster,
-                                    backdrop = card.backdrop,
-                                    overview = card.overview,
-                                    year = card.year,
-                                    genres = card.genres,
-                                ),
-                            )
+                        items(episodes, key = { it.number }) { episode ->
+                            EpisodeCard(episode)
                         }
                     }
                 }
-
-                Spacer(Modifier.height(28.dp))
             }
         }
     }
 
     LaunchedEffect(Unit) { runCatching { firstButton.requestFocus() } }
+}
+
+private fun detailMeta(card: Tmdb.Card, details: Tmdb.Details?): String {
+    val parts = mutableListOf<String>()
+    if (details != null && details.rating > 0) parts += "${"%.1f".format(details.rating)}  ★"
+    if (card.isSeries) {
+        if (details != null && details.seasons > 0) {
+            parts += if (details.seasons == 1) "1 temporada" else "${details.seasons} temporadas"
+        }
+    } else if (details?.runtime != null) {
+        parts += "${details.runtime / 60}h ${details.runtime % 60}min"
+    }
+    if (card.year != null) parts += card.year
+    if (card.genres.isNotBlank()) parts += card.genres
+    return parts.joinToString("  ·  ")
+}
+
+@Composable
+private fun EpisodeCard(episode: Tmdb.Episode) {
+    var focused by remember { mutableStateOf(false) }
+
+    Column(
+        Modifier
+            .width(190.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .border(
+                width = if (focused) 3.dp else 0.dp,
+                color = if (focused) Cine.TextPrimary else Color.Transparent,
+                shape = RoundedCornerShape(10.dp),
+            )
+            .onFocusChanged { focused = it.isFocused }
+            .clickable {}
+            .padding(4.dp),
+    ) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .aspectRatio(16f / 9f)
+                .clip(RoundedCornerShape(8.dp))
+                .background(Cine.Surface),
+        ) {
+            if (episode.still != null) {
+                AsyncImage(
+                    model = episode.still,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        }
+        Spacer(Modifier.height(7.dp))
+        Text(
+            "${episode.number}. ${episode.name}",
+            color = Cine.TextPrimary,
+            fontSize = 12.sp,
+            maxLines = 1,
+        )
+    }
 }
 
 @Composable
@@ -184,7 +277,7 @@ private fun ActionButton(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .clip(shape)
-            .background(if (primary) Color(0xFFE9E9EC) else Color(0x33FFFFFF))
+            .background(if (primary) Color(0xFFE9E9EC) else Cine.Pill)
             .border(
                 width = if (focused) 3.dp else 0.dp,
                 color = if (focused) Cine.TextPrimary else Color.Transparent,
