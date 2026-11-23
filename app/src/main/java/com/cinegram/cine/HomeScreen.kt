@@ -14,13 +14,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -28,7 +26,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -37,18 +34,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
@@ -56,27 +45,15 @@ import com.cinegram.cine.profiles.Favorite
 import com.cinegram.cine.profiles.FavoritesStore
 import com.cinegram.cine.profiles.ProfileStore
 import com.cinegram.design.Cine
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private val HomeBackdrop = Brush.verticalGradient(
-    colorStops = arrayOf(
-        0f to Color(0xFF16243B),
-        0.32f to Color(0xFF0A1220),
-        1f to Color(0xFF000000),
-    ),
-)
 private const val SHOW_ID = 133808
-private const val MAX_HEROES = 6
 
-private val EpisodeRowHeight = 138.dp
-private val PosterRowHeight = 240.dp
-
-private enum class Tab(val media: String?) {
-    Inicio("tv"),
-    Series("tv"),
-    Filmes("movie"),
-    MinhaLista(null),
+private enum class Tab {
+    Inicio,
+    Series,
+    Filmes,
+    MinhaLista,
 }
 
 private fun tabOf(label: String): Tab = when (label) {
@@ -111,20 +88,14 @@ private val FakeRow = listOf(
 @Composable
 fun HomeScreen() {
     val inicioFocus = remember { FocusRequester() }
-    val firstRowFocus = remember { FocusRequester() }
+    val rowFocus = remember { FocusRequester() }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     var tab by remember { mutableStateOf(Tab.Inicio) }
-    var heroes by remember { mutableStateOf<List<Tmdb.Hero>>(emptyList()) }
-    var trendingCards by remember { mutableStateOf<List<Tmdb.Card>>(emptyList()) }
-    var popularCards by remember { mutableStateOf<List<Tmdb.Card>>(emptyList()) }
-    var topCards by remember { mutableStateOf<List<Tmdb.Card>>(emptyList()) }
+    var cards by remember { mutableStateOf<List<Tmdb.Card>>(emptyList()) }
     var stills by remember { mutableStateOf<List<String?>>(emptyList()) }
-    var index by remember { mutableStateOf(0) }
     var lastAction by remember { mutableStateOf("-") }
     var detail by remember { mutableStateOf<Tmdb.Card?>(null) }
-    var detailMedia by remember { mutableStateOf("tv") }
-    val logos = remember { mutableStateMapOf<String, String?>() }
 
     val profiles by ProfileStore.profiles.collectAsState()
     val activeId by ProfileStore.activeId.collectAsState()
@@ -132,160 +103,71 @@ fun HomeScreen() {
     val favorites by FavoritesStore.items.collectAsState()
     val myList = favorites.filter { it.owner == activeId }
 
-    val openDetail: (Tmdb.Card) -> Unit = { card ->
-        detail = card
-        detailMedia = if (card.isSeries) "tv" else "movie"
-    }
-
     LaunchedEffect(tab) {
         scope.launch { listState.scrollToItem(0) }
-        index = 0
-        val media = tab.media ?: return@LaunchedEffect
-        heroes = Tmdb.trending(media).take(MAX_HEROES)
+        cards = when (tab) {
+            Tab.Inicio -> Tmdb.trending("tv").map { it.asCard(true) } +
+                Tmdb.trending("movie").map { it.asCard(false) }
+
+            Tab.Series -> Tmdb.popular("tv")
+            Tab.Filmes -> Tmdb.popular("movie")
+            Tab.MinhaLista -> myList.map { favCard(it) }
+        }
         stills = if (tab == Tab.Inicio) Tmdb.stills(SHOW_ID, 1) else emptyList()
-        popularCards = Tmdb.popular(media)
-        topCards = Tmdb.topRated(media)
-        trendingCards = heroes.map {
-            Tmdb.Card(
-                id = it.id,
-                title = it.title,
-                poster = null,
-                backdrop = it.backdrop,
-                overview = it.overview,
-                isSeries = media == "tv",
-            )
-        }
     }
 
-    LaunchedEffect(heroes.size) {
-        if (heroes.size > 1) {
-            while (true) {
-                delay(9000)
-                index = (index + 1) % heroes.size
-            }
-        }
+    LaunchedEffect(activeId) {
+        if (tab == Tab.MinhaLista) cards = myList.map { favCard(it) }
     }
 
-    LaunchedEffect(tab, index, heroes.size) {
-        val media = tab.media ?: return@LaunchedEffect
-        val hero = heroes.getOrNull(index) ?: return@LaunchedEffect
-        val key = "$media-${hero.id}"
-        if (!logos.containsKey(key)) {
-            logos[key] = Tmdb.logo(media, hero.id)
-        }
-    }
-
-    Box(Modifier.fillMaxSize().background(HomeBackdrop)) {
+    Box(Modifier.fillMaxSize().background(Cine.Bg)) {
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = 82.dp, bottom = 60.dp),
+            contentPadding = PaddingValues(top = 76.dp, bottom = 40.dp),
         ) {
-            item {
-                HeroCarousel(
-                    heroes = heroes,
-                    index = index,
-                    media = tab.media ?: "tv",
-                    lastAction = lastAction,
-                    logos = logos,
-                    upFocus = inicioFocus,
-                    downFocus = firstRowFocus,
-                    onDot = { index = it },
-                    onStep = { delta ->
-                        if (heroes.isNotEmpty()) {
-                            index = (index + delta).coerceIn(0, heroes.lastIndex)
-                        }
-                    },
-                    onPlay = { lastAction = "Assistir ${heroes.getOrNull(index)?.title.orEmpty()}" },
-                )
-            }
-
             if (tab == Tab.Inicio) {
                 item {
                     Column {
-                        Spacer(Modifier.height(24.dp))
-                        RowTitle("Continuar assistindo")
+                        Spacer(Modifier.height(6.dp))
+                        SectionTitle("Continuar assistindo")
                         Spacer(Modifier.height(10.dp))
-                        RowSlot(EpisodeRowHeight) {
-                            LazyRow(
-                                horizontalArrangement = Arrangement.spacedBy(Cine.RowGap),
-                                contentPadding = PaddingValues(horizontal = Cine.ScreenMargin),
-                            ) {
-                                itemsIndexed(FakeRow, key = { _, item -> item.title }) { i, item ->
-                                    LandscapeCard(
-                                        item = item,
-                                        url = stills.getOrNull(i),
-                                        focusRequester = if (i == 0) firstRowFocus else null,
-                                        onClick = { lastAction = item.title },
-                                    )
-                                }
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(Cine.RowGap),
+                            contentPadding = PaddingValues(horizontal = Cine.ScreenMargin),
+                        ) {
+                            itemsIndexed(FakeRow, key = { _, item -> item.title }) { i, item ->
+                                LandscapeCard(
+                                    item = item,
+                                    url = stills.getOrNull(i),
+                                    focusRequester = if (i == 0) inicioFocus else null,
+                                    onClick = { lastAction = item.title },
+                                )
                             }
                         }
-                    }
-                }
-            }
-
-            if (tab == Tab.MinhaLista) {
-                item {
-                    Column {
-                        Spacer(Modifier.height(24.dp))
-                        RowTitle("Minha Lista")
-                        Spacer(Modifier.height(10.dp))
-                        if (myList.isEmpty()) {
-                            Placeholder("Nada na lista ainda. Abra um título e toque em Minha Lista.")
-                        } else {
-                            RowSlot(PosterRowHeight) {
-                                LazyRow(
-                                    horizontalArrangement = Arrangement.spacedBy(Cine.RowGap),
-                                    contentPadding = PaddingValues(horizontal = Cine.ScreenMargin),
-                                ) {
-                                    itemsIndexed(
-                                        myList,
-                                        key = { _, fav -> "${fav.media}-${fav.id}" },
-                                    ) { i, fav ->
-                                        PosterCard(
-                                            card = favCard(fav),
-                                            focusRequester = if (i == 0) firstRowFocus else null,
-                                            onClick = { openDetail(favCard(fav)) },
-                                        )
-                                    }
-                                }
-                            }
-                        }
+                        Spacer(Modifier.height(26.dp))
                     }
                 }
             } else {
-                item {
-                    Column {
-                        Spacer(Modifier.height(24.dp))
-                        RowTitle("Em alta agora")
-                        Spacer(Modifier.height(10.dp))
-                        RowSlot(PosterRowHeight) {
-                            PosterRow(trendingCards, firstRowFocus, openDetail)
-                        }
-                    }
-                }
+                item { Spacer(Modifier.height(10.dp)) }
+            }
 
-                item {
-                    Column {
-                        Spacer(Modifier.height(22.dp))
-                        RowTitle("Populares")
-                        Spacer(Modifier.height(10.dp))
-                        RowSlot(PosterRowHeight) {
-                            PosterRow(popularCards, null, openDetail)
-                        }
-                    }
-                }
-
-                item {
-                    Column {
-                        Spacer(Modifier.height(22.dp))
-                        RowTitle("Mais bem avaliadas")
-                        Spacer(Modifier.height(10.dp))
-                        RowSlot(PosterRowHeight) {
-                            PosterRow(topCards, null, openDetail)
-                        }
-                    }
+            item {
+                Column {
+                    SectionTitle(
+                        when (tab) {
+                            Tab.Inicio -> "Em alta"
+                            Tab.Series -> "Séries"
+                            Tab.Filmes -> "Filmes"
+                            Tab.MinhaLista -> "Minha Lista"
+                        },
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    CoverRow(
+                        cards = cards,
+                        firstFocus = rowFocus,
+                        onClick = { card -> detail = card },
+                    )
                 }
             }
         }
@@ -301,7 +183,6 @@ fun HomeScreen() {
         detail?.let { card ->
             DetailScreen(
                 card = card,
-                media = detailMedia,
                 owner = activeId,
                 onBack = { detail = null },
             )
@@ -311,219 +192,23 @@ fun HomeScreen() {
     LaunchedEffect(Unit) { runCatching { inicioFocus.requestFocus() } }
 }
 
+private fun Tmdb.Hero.asCard(series: Boolean): Tmdb.Card = Tmdb.Card(
+    id = id,
+    title = title,
+    poster = backdrop,
+    backdrop = backdrop,
+    overview = overview,
+    isSeries = series,
+)
+
 @Composable
-private fun RowTitle(text: String) {
+private fun SectionTitle(text: String) {
     Text(
         text,
         style = MaterialTheme.typography.headlineSmall.copy(fontSize = 17.sp),
         color = Cine.TextPrimary,
         modifier = Modifier.padding(horizontal = Cine.ScreenMargin),
     )
-}
-
-@Composable
-private fun Placeholder(text: String) {
-    Box(
-        Modifier.fillMaxWidth().height(200.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(text, style = MaterialTheme.typography.bodyMedium, color = Cine.TextSecondary)
-    }
-}
-
-@Composable
-private fun RowSlot(height: Dp, content: @Composable () -> Unit) {
-    Box(
-        Modifier.fillMaxWidth().height(height),
-        contentAlignment = Alignment.CenterStart,
-    ) {
-        content()
-    }
-}
-
-@Composable
-private fun HeroCarousel(
-    heroes: List<Tmdb.Hero>,
-    index: Int,
-    media: String,
-    lastAction: String,
-    logos: Map<String, String?>,
-    upFocus: FocusRequester,
-    downFocus: FocusRequester,
-    onDot: (Int) -> Unit,
-    onStep: (Int) -> Unit,
-    onPlay: () -> Unit,
-) {
-    val hero = heroes.getOrNull(index)
-    val logo = hero?.let { logos["$media-${it.id}"] }
-    var focused by remember { mutableStateOf(false) }
-
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .padding(horizontal = Cine.ScreenMargin)
-            .aspectRatio(2.6f)
-            .clip(RoundedCornerShape(14.dp))
-            .background(Cine.Surface)
-            .border(
-                width = if (focused) 3.dp else 0.dp,
-                color = if (focused) Cine.TextPrimary else Color.Transparent,
-                shape = RoundedCornerShape(14.dp),
-            )
-            .focusProperties {
-                up = upFocus
-                down = downFocus
-            }
-            .onFocusChanged { focused = it.isFocused }
-            .onKeyEvent { event ->
-                if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
-                when (event.key) {
-                    Key.DirectionLeft -> {
-                        onStep(-1)
-                        true
-                    }
-                    Key.DirectionRight -> {
-                        onStep(1)
-                        true
-                    }
-                    else -> false
-                }
-            }
-            .clickable(onClick = onPlay),
-    ) {
-        if (hero?.backdrop != null) {
-            AsyncImage(
-                model = hero.backdrop,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
-
-        // Degrade da esquerda, para o texto ficar legivel sobre a arte.
-        Box(
-            Modifier.fillMaxSize().background(
-                Brush.horizontalGradient(
-                    colorStops = arrayOf(
-                        0f to Color(0xE6000000),
-                        0.45f to Color(0x99000000),
-                        0.75f to Color(0x11000000),
-                    ),
-                ),
-            ),
-        )
-
-        Column(
-            Modifier
-                .align(Alignment.BottomStart)
-                .padding(start = 36.dp, end = 36.dp, bottom = 26.dp)
-                .fillMaxWidth(0.62f),
-        ) {
-            Text("DESTAQUE", style = MaterialTheme.typography.labelSmall, color = Cine.TextSecondary)
-
-            Spacer(Modifier.height(10.dp))
-
-            if (logo != null) {
-                AsyncImage(
-                    model = logo,
-                    contentDescription = hero?.title,
-                    contentScale = ContentScale.Fit,
-                    alignment = Alignment.CenterStart,
-                    modifier = Modifier.height(66.dp).fillMaxWidth(),
-                )
-            } else {
-                Text(
-                    hero?.title ?: "Carregando",
-                    style = MaterialTheme.typography.displaySmall.copy(fontSize = 34.sp),
-                    color = Cine.TextPrimary,
-                    maxLines = 2,
-                )
-            }
-
-            Spacer(Modifier.height(10.dp))
-
-            Text(
-                hero?.overview?.takeIf { it.isNotBlank() }
-                    ?: "Sem sinopse em portugues para este titulo.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Cine.TextSecondary,
-                maxLines = 2,
-            )
-        }
-
-        if (heroes.size > 1) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(5.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(end = 18.dp, bottom = 18.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0x4DFFFFFF))
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
-            ) {
-                heroes.forEachIndexed { i, _ ->
-                    Box(
-                        Modifier
-                            .size(5.dp)
-                            .clip(CircleShape)
-                            .background(if (i == index) Color.White else Color(0xB3FFFFFF))
-                            .clickable { onDot(i) },
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun PosterRow(
-    cards: List<Tmdb.Card>,
-    firstFocus: FocusRequester?,
-    onClick: (Tmdb.Card) -> Unit,
-) {
-    LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(Cine.RowGap),
-        contentPadding = PaddingValues(horizontal = Cine.ScreenMargin),
-    ) {
-        itemsIndexed(cards, key = { _, card -> card.id }) { index, card ->
-            PosterCard(
-                card = card,
-                focusRequester = if (index == 0) firstFocus else null,
-                onClick = { onClick(card) },
-            )
-        }
-    }
-}
-
-@Composable
-private fun PosterCard(card: Tmdb.Card, focusRequester: FocusRequester?, onClick: () -> Unit) {
-    var focused by remember { mutableStateOf(false) }
-
-    Box(
-        Modifier
-            .width(150.dp)
-            .aspectRatio(2f / 3f)
-            .clip(RoundedCornerShape(10.dp))
-            .background(Cine.Surface)
-            .border(
-                width = if (focused) 3.dp else 0.dp,
-                color = if (focused) Cine.TextPrimary else Color.Transparent,
-                shape = RoundedCornerShape(10.dp),
-            )
-            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-            .onFocusChanged { focused = it.isFocused }
-            .clickable(onClick = onClick),
-    ) {
-        if (card.poster != null) {
-            AsyncImage(
-                model = card.poster,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
-    }
 }
 
 @Composable
