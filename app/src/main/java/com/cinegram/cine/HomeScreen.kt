@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -74,6 +73,56 @@ private fun favCard(fav: Favorite): Tmdb.Card = Tmdb.Card(
     isSeries = fav.media == "tv",
 )
 
+/** Amostra temporária, só para ver a faixa montada antes da biblioteca do Telegram. */
+private data class Sample(
+    val id: Int,
+    val title: String,
+    val year: String,
+    val line: String,
+    val service: String,
+)
+
+private val SampleSeries = listOf(
+    Sample(100088, "The Last of Us", "2023", "2 temporadas", "Max"),
+    Sample(94997, "A Casa do Dragão", "2022", "2 temporadas", "Max"),
+    Sample(97546, "Ted Lasso", "2020", "3 temporadas", "Apple TV"),
+    Sample(66732, "Stranger Things", "2016", "4 temporadas", "Netflix"),
+    Sample(93405, "Round 6", "2021", "3 temporadas", "Netflix"),
+    Sample(76479, "The Boys", "2019", "4 temporadas", "Prime Video"),
+    Sample(106379, "Fallout", "2024", "2 temporadas", "Prime Video"),
+    Sample(87108, "Chernobyl", "2019", "1 temporada", "Max"),
+)
+
+private val SampleMovies = listOf(
+    Sample(693134, "Duna: Parte 2", "2024", "2h 46min", "Max"),
+    Sample(872585, "Oppenheimer", "2023", "3h", "Prime Video"),
+    Sample(346698, "Barbie", "2023", "1h 54min", "Max"),
+    Sample(157336, "Interestelar", "2014", "2h 49min", "Prime Video"),
+    Sample(496243, "Parasita", "2019", "2h 12min", "Max"),
+    Sample(598, "Cidade de Deus", "2002", "2h 10min", "Netflix"),
+    Sample(244786, "Whiplash", "2014", "1h 47min", "Netflix"),
+    Sample(603, "Matrix", "1999", "2h 16min", "Max"),
+)
+
+private suspend fun loadSamples(tab: Tab): List<Tmdb.Card> {
+    val source = when (tab) {
+        Tab.Filmes -> SampleMovies
+        Tab.Series -> SampleSeries
+        else -> SampleSeries.take(4) + SampleMovies.take(4)
+    }
+    return source.map { sample ->
+        Tmdb.Card(
+            id = sample.id,
+            title = sample.title,
+            poster = Tmdb.poster(if (tab == Tab.Filmes) "movie" else "tv", sample.id),
+            year = sample.year,
+            genres = sample.line,
+            isSeries = tab != Tab.Filmes,
+            service = sample.service,
+        )
+    }
+}
+
 private data class FakeItem(val title: String, val tone: Color, val progress: Float)
 
 private val FakeRow = listOf(
@@ -106,17 +155,13 @@ fun HomeScreen() {
     LaunchedEffect(tab) {
         scope.launch { listState.scrollToItem(0) }
         cards = when (tab) {
-            Tab.Inicio -> Tmdb.trending("tv").map { it.asCard(true) } +
-                Tmdb.trending("movie").map { it.asCard(false) }
-
-            Tab.Series -> Tmdb.popular("tv")
-            Tab.Filmes -> Tmdb.popular("movie")
             Tab.MinhaLista -> myList.map { favCard(it) }
+            else -> loadSamples(tab)
         }
         stills = if (tab == Tab.Inicio) Tmdb.stills(SHOW_ID, 1) else emptyList()
     }
 
-    LaunchedEffect(activeId) {
+    LaunchedEffect(activeId, tab) {
         if (tab == Tab.MinhaLista) cards = myList.map { favCard(it) }
     }
 
@@ -191,15 +236,6 @@ fun HomeScreen() {
 
     LaunchedEffect(Unit) { runCatching { inicioFocus.requestFocus() } }
 }
-
-private fun Tmdb.Hero.asCard(series: Boolean): Tmdb.Card = Tmdb.Card(
-    id = id,
-    title = title,
-    poster = backdrop,
-    backdrop = backdrop,
-    overview = overview,
-    isSeries = series,
-)
 
 @Composable
 private fun SectionTitle(text: String) {
