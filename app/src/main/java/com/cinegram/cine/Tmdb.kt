@@ -102,6 +102,13 @@ object Tmdb {
         return if (path.isNullOrEmpty()) null else "$IMAGE/w1280$path"
     }
 
+    /** Capa pelo id, usada na lista de amostra. */
+    suspend fun poster(media: String, id: Int): String? {
+        val body = get("/$media/$id") ?: return null
+        val path = runCatching { JSONObject(body).optString("poster_path") }.getOrNull()
+        return if (path.isNullOrEmpty()) null else "$IMAGE/w500$path"
+    }
+
     /**
      * Arte oficial do titulo, aquela com a tipografia propria de cada obra.
      * Prefere portugues, depois ingles, depois qualquer idioma.
