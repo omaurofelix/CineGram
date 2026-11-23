@@ -32,14 +32,27 @@ object Tmdb {
         val year: String? = null,
         val genres: String = "",
         val isSeries: Boolean = true,
+        val service: String? = null,
     ) {
+        val media: String
+            get() = if (isSeries) "tv" else "movie"
+
         val meta: String
-            get() = listOfNotNull(
-                if (isSeries) "Série" else "Filme",
-                year,
-                genres.ifBlank { null },
-            ).joinToString(" • ")
+            get() = listOfNotNull(year, genres.ifBlank { null }).joinToString("  ·  ")
     }
+
+    data class Details(
+        val rating: Double,
+        val seasons: Int,
+        val runtime: Int?,
+    )
+
+    data class Episode(
+        val number: Int,
+        val name: String,
+        val overview: String,
+        val still: String?,
+    )
 
     private val GENRES = mapOf(
         28 to "Ação",
@@ -90,7 +103,7 @@ object Tmdb {
     }
 
     /**
-     * Arte oficial do titulo, aquela com a tipografia própria de cada obra.
+     * Arte oficial do titulo, aquela com a tipografia propria de cada obra.
      * Prefere portugues, depois ingles, depois qualquer idioma.
      */
     suspend fun logo(media: String, id: Int): String? {
@@ -107,6 +120,36 @@ object Tmdb {
                 ?: found.firstOrNull()?.second
             chosen?.let { "$IMAGE/w500$it" }
         }.getOrNull()
+    }
+
+    /** Nota, temporadas e duracao, usados na tela de detalhe. */
+    suspend fun details(media: String, id: Int): Details? {
+        val body = get("/$media/$id") ?: return null
+        return runCatching {
+            val o = JSONObject(body)
+            Details(
+                rating = o.optDouble("vote_average", 0.0),
+                seasons = o.optInt("number_of_seasons", 0),
+                runtime = o.optInt("runtime", 0).takeIf { it > 0 },
+            )
+        }.getOrNull()
+    }
+
+    suspend fun season(tvId: Int, season: Int): List<Episode> {
+        val body = get("/tv/$tvId/season/$season") ?: return emptyList()
+        return runCatching {
+            val episodes = JSONObject(body).optJSONArray("episodes") ?: return emptyList()
+            (0 until episodes.length()).mapNotNull { i ->
+                val o = episodes.optJSONObject(i) ?: return@mapNotNull null
+                val still = o.optString("still_path")
+                Episode(
+                    number = o.optInt("episode_number"),
+                    name = o.optString("name"),
+                    overview = o.optString("overview"),
+                    still = if (still.isEmpty()) null else "$IMAGE/w300$still",
+                )
+            }
+        }.getOrDefault(emptyList())
     }
 
     /**
@@ -126,7 +169,7 @@ object Tmdb {
         }.getOrDefault(emptyList())
     }
 
-    /** Destaques da semana, usados no carrossel do topo da home. */
+    /** Destaques da semana, usados quando ainda não há biblioteca local. */
     suspend fun trending(media: String): List<Hero> {
         val body = get("/trending/$media/week") ?: return emptyList()
         return runCatching {
@@ -155,7 +198,7 @@ object Tmdb {
         if (ids == null) return ""
         return (0 until minOf(ids.length(), 2))
             .mapNotNull { GENRES[ids.optInt(it)] }
-            .joinToString(" • ")
+            .joinToString("  ·  ")
     }
 
     private suspend fun cards(path: String): List<Card> {
@@ -171,7 +214,7 @@ object Tmdb {
                 Card(
                     id = o.optInt("id"),
                     title = title,
-                    poster = "$IMAGE/w342$poster",
+                    poster = "$IMAGE/w500$poster",
                     backdrop = if (backdrop.isEmpty()) null else "$IMAGE/w780$backdrop",
                     overview = o.optString("overview"),
                     year = yearOf(o),
